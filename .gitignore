@@ -19,8 +19,9 @@ web-build/
 *.pem
 *.key
 
-# Uploads & local file storage
-uploads/
+# Uploads & local file storage (anchored so src/modules/uploads is NOT ignored)
+/uploads/
+/backend/uploads/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -35,3 +36,4 @@ Thumbs.db
 # Scratch & temporary scripts
 scratch/
 .tmp/
+

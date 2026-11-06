@@ -3,7 +3,7 @@
 .env*.local
 node_modules
 dist
-uploads
+/uploads
 coverage
 *.log
 npm-debug.log*
