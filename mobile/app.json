@@ -80,7 +80,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "http://10.30.80.86:4000/api/v1"
+      "apiUrl": "https://ev-production-760f.up.railway.app/api/v1"
     }
   }
 }

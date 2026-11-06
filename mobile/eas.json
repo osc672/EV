@@ -17,7 +17,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://evrescue-backend.up.railway.app/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://ev-production-760f.up.railway.app/api/v1"
       }
     },
     "production": {
@@ -26,7 +26,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://evrescue-backend.up.railway.app/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://ev-production-760f.up.railway.app/api/v1"
       }
     }
   },
