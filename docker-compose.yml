@@ -1,0 +1,94 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: evrescue-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evrescue
+      POSTGRES_PASSWORD: evrescue
+      POSTGRES_DB: evrescue
+    ports:
+      - '5432:5432'
+    volumes:
+      - evrescue_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U evrescue -d evrescue']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: evrescue-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - evrescue_redis:/data
+
+  minio:
+    image: minio/minio:latest
+    container_name: evrescue-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - evrescue_minio:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb -p local/ev-rescue || true;
+      mc anonymous set download local/ev-rescue || true;
+      exit 0;
+      "
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: evrescue-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      API_PREFIX: /api/v1
+      CORS_ORIGINS: http://localhost:8081,http://localhost:19006
+      DATABASE_URL: postgresql://evrescue:evrescue@db:5432/evrescue?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me-32-chars!!}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me-32-chars!}
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 30d
+      OTP_TTL_MINUTES: 5
+      OTP_MAX_ATTEMPTS: 5
+      OTP_DEBUG_RETURN_CODE: 'false'
+      SMS_PROVIDER: console
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: ev-rescue
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_PUBLIC_BASE_URL: http://localhost:9000/ev-rescue
+      REDIS_URL: redis://redis:6379
+      ADMIN_PHONE: ${ADMIN_PHONE:-+919999999999}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@evrescue.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@12345}
+    ports:
+      - '4000:4000'
+
+volumes:
+  evrescue_pgdata:
+  evrescue_redis:
+  evrescue_minio:

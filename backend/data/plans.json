@@ -1,0 +1,60 @@
+[
+  {
+    "key": "MONTH_1",
+    "name": "1 Month Plan",
+    "durationLabel": "30 Days Validity",
+    "price": 350,
+    "priceFormatted": "₹350",
+    "minRadiusM": 500,
+    "maxRadiusM": 2000,
+    "visibilityRange": "500m to 2 km radius",
+    "priorityLabel": "Standard Visibility",
+    "priorityTier": 1,
+    "badge": "Starter",
+    "badgeColor": "#0284C7",
+    "features": [
+      "Visible from 500m to 2 km radius for users",
+      "Ranked by driver reviews",
+      "Instant booking push notifications"
+    ]
+  },
+  {
+    "key": "MONTH_5",
+    "name": "5 Months Plan",
+    "durationLabel": "150 Days Validity",
+    "price": 650,
+    "priceFormatted": "₹650",
+    "minRadiusM": 100,
+    "maxRadiusM": 5000,
+    "visibilityRange": "100m to 5 km radius",
+    "priorityLabel": "High Preference",
+    "priorityTier": 2,
+    "badge": "Popular Choice",
+    "badgeColor": "#059669",
+    "features": [
+      "Visible from 100m to 5 km radius for users",
+      "High priority over 1-month plans",
+      "Driver review booster & priority ranking"
+    ]
+  },
+  {
+    "key": "YEAR_1",
+    "name": "1 Year Plan",
+    "durationLabel": "365 Days Validity",
+    "price": 1250,
+    "priceFormatted": "₹1,250",
+    "minRadiusM": 100,
+    "maxRadiusM": 10000,
+    "visibilityRange": "100m to 10 km radius",
+    "priorityLabel": "1st Preference",
+    "priorityTier": 3,
+    "badge": "1st Preference ⭐",
+    "badgeColor": "#D97706",
+    "features": [
+      "Visible from 100m to 10 km radius for users",
+      "1st Preference on map search & emergency alerts",
+      "Top algorithm ranking for all nearby drivers",
+      "Priority host badge & verified listing"
+    ]
+  }
+]

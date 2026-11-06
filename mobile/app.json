@@ -1,0 +1,86 @@
+{
+  "expo": {
+    "name": "EV Rescue",
+    "slug": "ev-rescue",
+    "scheme": "evrescue",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#021B14",
+    "primaryColor": "#10B981",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#021B14"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.evrescue.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "EV Rescue uses your location to find verified charging points near you."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.evrescue.app",
+      "splash": {
+        "backgroundColor": "#021B14",
+        "resizeMode": "contain",
+        "image": "./assets/splash-icon.png"
+      },
+      "adaptiveIcon": {
+        "backgroundColor": "#021B14",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "EV Rescue uses your location to find verified charging points near you."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "EV Rescue needs photo access so providers can upload verification documents."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0B3D2E"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "http://10.30.80.86:4000/api/v1"
+    }
+  }
+}

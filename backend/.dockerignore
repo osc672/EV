@@ -1,0 +1,12 @@
+.env
+.env.local
+.env*.local
+node_modules
+dist
+uploads
+coverage
+*.log
+npm-debug.log*
+.git
+.gitignore
+README.md

@@ -1,0 +1,369 @@
+// EV Rescue — Prisma schema
+// Primary datastore: PostgreSQL + PostGIS
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ------------------------------------------------------------------
+// Enums
+// ------------------------------------------------------------------
+
+enum Role {
+  DRIVER
+  PROVIDER
+  ADMIN
+}
+
+enum ProviderType {
+  HOME
+  SHOP
+  OFFICE
+  HOTEL
+  REPAIR_SHOP
+  BUSINESS
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum ConnectorType {
+  TYPE_2
+  CCS2
+  CHADEMO
+  TYPE_1
+  GB_T
+  AC_3_PIN
+  OTHER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  RAZORPAY
+}
+
+enum DocumentType {
+  ID_PROOF
+  ADDRESS_PROOF
+  OWNERSHIP_PROOF
+  ELECTRICITY_BILL
+  BUSINESS_LICENSE
+  CHARGER_PHOTO
+  SITE_PHOTO
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NotificationChannel {
+  PUSH
+  SMS
+  EMAIL
+  IN_APP
+}
+
+enum OtpPurpose {
+  PHONE_VERIFICATION
+  LOGIN
+  PASSWORD_RESET
+}
+
+// ------------------------------------------------------------------
+// Models
+// ------------------------------------------------------------------
+
+model User {
+  id             String    @id @default(uuid())
+  phone          String    @unique
+  email          String?   @unique
+  passwordHash   String?
+  fullName       String
+  role           Role      @default(DRIVER)
+  avatarUrl      String?
+  isPhoneVerified Boolean  @default(false)
+  isActive       Boolean   @default(true)
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  providerProfile  ProviderProfile?
+  vehicles         Vehicle[]
+  bookingsAsDriver Booking[]         @relation("DriverBookings")
+  reviews          Review[]
+  refreshTokens    RefreshToken[]
+  notifications    Notification[]
+  favorites        Favorite[]
+  auditLogs        AuditLog[]
+
+  @@index([role])
+  @@index([isActive])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model OtpCode {
+  id        String     @id @default(uuid())
+  phone     String
+  codeHash  String
+  purpose   OtpPurpose
+  attempts  Int        @default(0)
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime   @default(now())
+
+  @@index([phone, purpose])
+  @@index([expiresAt])
+}
+
+model ProviderProfile {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName       String
+  providerType       ProviderType
+  description        String?
+  phone              String?
+  addressLine        String
+  city               String
+  state              String
+  pincode            String
+  // PostGIS geography point (longitude, latitude). Managed via raw SQL.
+  location           Unsupported("geography(Point, 4326)")?
+  openingTime        String             @default("08:00")
+  closingTime        String             @default("22:00")
+  isOpenNow          Boolean            @default(true)
+  isVerified         Boolean            @default(false)
+  verificationStatus VerificationStatus @default(PENDING)
+  verificationNote   String?
+  rating             Decimal            @default(0) @db.Decimal(3, 2)
+  totalReviews       Int                @default(0)
+  totalBookings      Int                @default(0)
+  pricePerKwh        Decimal?           @db.Decimal(10, 2)
+  connectorTypes     ConnectorType[]
+  maxPowerKw         Int                @default(3)
+  hasParking         Boolean            @default(false)
+  hasRestroom        Boolean            @default(false)
+  hasWifi            Boolean            @default(false)
+  hasCctv            Boolean            @default(false)
+  is24x7             Boolean            @default(false)
+  subscriptionPlan   String?            @default("MONTH_1")
+  subscriptionStatus String             @default("ACTIVE")
+  subscriptionExpiresAt DateTime?
+  planPrice          Decimal?           @db.Decimal(10, 2)
+  planPriority       Int                @default(1)
+  planMinRadiusM     Int                @default(500)
+  planMaxRadiusM     Int                @default(2000)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  documents   ProviderDocument[]
+  bookings    Booking[]
+  reviews     Review[]
+  favorites   Favorite[]
+  availability ProviderAvailability[]
+
+  @@index([verificationStatus])
+  @@index([city])
+  @@index([providerType])
+}
+
+model ProviderAvailability {
+  id         String          @id @default(uuid())
+  providerId String
+  provider   ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  dayOfWeek  Int // 0 = Sunday ... 6 = Saturday
+  openTime   String
+  closeTime  String
+  isClosed   Boolean         @default(false)
+
+  @@unique([providerId, dayOfWeek])
+}
+
+model ProviderDocument {
+  id              String          @id @default(uuid())
+  providerId      String
+  provider        ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  type            DocumentType
+  fileUrl         String
+  status          DocumentStatus  @default(PENDING)
+  rejectionReason String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@index([providerId])
+  @@index([status])
+}
+
+model Vehicle {
+  id                 String        @id @default(uuid())
+  userId             String
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  make               String
+  model              String
+  connectorType      ConnectorType
+  batteryCapacityKwh Decimal?      @db.Decimal(6, 2)
+  registrationNumber String?
+  isPrimary          Boolean       @default(false)
+  createdAt          DateTime      @default(now())
+
+  bookings Booking[]
+
+  @@index([userId])
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  code          String        @unique
+  driverId      String
+  driver        User          @relation("DriverBookings", fields: [driverId], references: [id])
+  providerId    String
+  provider      ProviderProfile @relation(fields: [providerId], references: [id])
+  vehicleId     String?
+  vehicle       Vehicle?      @relation(fields: [vehicleId], references: [id])
+  status        BookingStatus @default(PENDING)
+  connectorType ConnectorType
+  scheduledAt   DateTime
+  startedAt     DateTime?
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  cancelReason  String?
+  kwhDelivered  Decimal?      @db.Decimal(8, 3)
+  estimatedCost Decimal?      @db.Decimal(10, 2)
+  totalAmount   Decimal?      @db.Decimal(10, 2)
+  paymentStatus PaymentStatus @default(UNPAID)
+  paymentMethod PaymentMethod?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  payment Payment?
+  review  Review?
+
+  @@index([driverId])
+  @@index([providerId])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  bookingId        String        @unique
+  booking          Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount           Decimal       @db.Decimal(10, 2)
+  currency         String        @default("INR")
+  method           PaymentMethod
+  status           PaymentStatus @default(PENDING)
+  gateway          String?
+  gatewayOrderId   String?       @unique
+  gatewayPaymentId String?       @unique
+  gatewaySignature String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([status])
+}
+
+model Review {
+  id         String          @id @default(uuid())
+  bookingId  String          @unique
+  booking    Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  driverId   String
+  driver     User            @relation(fields: [driverId], references: [id])
+  providerId String
+  provider   ProviderProfile @relation(fields: [providerId], references: [id])
+  rating     Int
+  comment    String?
+  createdAt  DateTime        @default(now())
+
+  @@index([providerId])
+  @@index([driverId])
+}
+
+model Favorite {
+  id         String          @id @default(uuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  providerId String
+  provider   ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+
+  @@unique([userId, providerId])
+  @@index([userId])
+}
+
+model Notification {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  data      Json?
+  channel   NotificationChannel @default(IN_APP)
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
