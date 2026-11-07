@@ -3,14 +3,14 @@ import { connectorEnum } from '../providers/providers.schema';
 
 export const createBookingSchema = z.object({
   providerId: z.string().uuid(),
-  vehicleId: z.string().uuid().optional(),
+  vehicleId: z.string().uuid().nullable().optional().or(z.literal('')).transform((v) => v || undefined),
   connectorType: connectorEnum,
   scheduledAt: z
     .string()
     .datetime({ message: 'scheduledAt must be an ISO 8601 datetime' }),
-  notes: z.string().trim().max(500).optional(),
-  driverLatitude: z.number().optional(),
-  driverLongitude: z.number().optional(),
+  notes: z.string().trim().max(500).nullable().optional().transform((v) => v || undefined),
+  driverLatitude: z.number().nullable().optional().transform((v) => v ?? undefined),
+  driverLongitude: z.number().nullable().optional().transform((v) => v ?? undefined),
 });
 
 export const updateStatusSchema = z.object({

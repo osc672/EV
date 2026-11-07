@@ -4,22 +4,31 @@ import { logger } from '../lib/logger';
 import { env } from '../config/env';
 
 export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
-  if (err instanceof AppError) {
+  const isAppErr =
+    err instanceof AppError ||
+    (typeof err === 'object' &&
+      err !== null &&
+      'statusCode' in err &&
+      typeof (err as any).statusCode === 'number' &&
+      'isOperational' in err);
+
+  if (isAppErr) {
+    const appErr = err as AppError;
     const error: Record<string, unknown> = {
-      code: err.code,
-      message: err.message,
+      code: appErr.code || 'APP_ERROR',
+      message: appErr.message,
     };
-    if (err.details !== undefined) error.details = err.details;
+    if (appErr.details !== undefined) error.details = appErr.details;
     const payload = { success: false, error };
-    if (!err.isOperational) {
+    if (!appErr.isOperational) {
       logger.error('non_operational_error', {
-        code: err.code,
-        message: err.message,
-        stack: err.stack,
+        code: appErr.code,
+        message: appErr.message,
+        stack: appErr.stack,
         path: req.path,
       });
     }
-    return res.status(err.statusCode).json(payload);
+    return res.status(appErr.statusCode).json(payload);
   }
 
   // Handle common JWT errors
@@ -31,7 +40,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     });
   }
 
-  // Handle Prisma errors without leaking details in production
+  // Handle Prisma errors
   const prismaCode = (err as { code?: string })?.code;
   if (prismaCode === 'P2002') {
     return res.status(409).json({
@@ -45,9 +54,23 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
       error: { code: 'NOT_FOUND', message: 'Record not found' },
     });
   }
+  if (prismaCode === 'P2003') {
+    return res.status(400).json({
+      success: false,
+      error: { code: 'BAD_REQUEST', message: 'Referenced entity not found or constraint failed' },
+    });
+  }
+  if (prismaCode === 'P2024' || prismaCode === 'P2028') {
+    return res.status(503).json({
+      success: false,
+      error: { code: 'SERVICE_UNAVAILABLE', message: 'Database pool is busy, please retry momentarily' },
+    });
+  }
+
+  const rawMessage = (err as Error)?.message || 'Internal server error';
 
   logger.error('unhandled_error', {
-    message: (err as Error)?.message,
+    message: rawMessage,
     stack: (err as Error)?.stack,
     path: req.path,
   });
@@ -56,7 +79,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     success: false,
     error: {
       code: 'INTERNAL_ERROR',
-      message: env.NODE_ENV === 'production' ? 'Internal server error' : (err as Error)?.message,
+      message: rawMessage,
     },
   });
 }
