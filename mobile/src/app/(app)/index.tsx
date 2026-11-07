@@ -602,6 +602,9 @@ function DriverHomeScreen() {
                   coordinate={activeRoutePoints[Math.floor(activeRoutePoints.length / 2)]}
                   anchor={{ x: 0.5, y: 0.5 }}
                   tracksViewChanges={false}
+                  isEtaBadge={true}
+                  etaText={`${activeDrivingMinutes} min`}
+                  title={`${activeDrivingMinutes} min`}
                 >
                   <View style={styles.routeEtaBadge}>
                     <Text style={styles.routeEtaBadgeText}>{activeDrivingMinutes} min</Text>
@@ -710,12 +713,15 @@ function DriverHomeScreen() {
                 lineJoin="round"
               />
 
-              {/* ETA Bubble on the Route (like '7 min 🍃' in Image 2) */}
+              {/* ETA Bubble on the Route (like '3 min' in Google Maps) */}
               {selectedRouteMidpoint && selectedRouteEta ? (
                 <Marker
                   coordinate={selectedRouteMidpoint}
                   anchor={{ x: 0.5, y: 0.5 }}
                   tracksViewChanges={false}
+                  isEtaBadge={true}
+                  etaText={`${selectedRouteEta.minutes} min`}
+                  title={`${selectedRouteEta.minutes} min`}
                 >
                   <View style={styles.routeEtaBadge}>
                     <Text style={styles.routeEtaBadgeText}>
@@ -968,7 +974,14 @@ function DriverHomeScreen() {
               icon="arrow-right"
               style={styles.detailBtn}
               contentStyle={styles.btnContent}
-              onPress={() => router.push(`/provider/${selectedProvider.id}`)}
+              onPress={() => {
+                if (selectedProvider?.id) {
+                  router.push({
+                    pathname: '/provider/[id]',
+                    params: { id: selectedProvider.id },
+                  });
+                }
+              }}
             >
               Details & Book
             </Button>
@@ -1947,7 +1960,7 @@ function ProviderStationDashboard() {
       <View style={providerStyles.sectionCard}>
         <View style={providerStyles.sectionCardHeader}>
           <Text style={providerStyles.sectionCardTitle}>Recent Charging Activity</Text>
-          <Pressable onPress={() => router.push('/bookings')}>
+          <Pressable onPress={() => router.push('/(app)/bookings')}>
             <Text style={providerStyles.sectionAction}>View All</Text>
           </Pressable>
         </View>

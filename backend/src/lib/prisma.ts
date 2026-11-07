@@ -31,6 +31,18 @@ if (env.NODE_ENV !== 'production') {
 export async function connectDatabase(): Promise<void> {
   await prisma.$connect();
   logger.info('database_connected');
+
+  try {
+    // Ensure PostGIS spatial index & high-frequency booking query indexes exist
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS provider_location_gix ON "ProviderProfile" USING GIST (location);
+      CREATE INDEX IF NOT EXISTS booking_driver_status_idx ON "Booking" ("driverId", "status");
+      CREATE INDEX IF NOT EXISTS booking_provider_status_idx ON "Booking" ("providerId", "status");
+    `);
+    logger.info('database_indexes_verified');
+  } catch (err) {
+    logger.warn('database_indexes_skipped', { error: String(err) });
+  }
 }
 
 export async function disconnectDatabase(): Promise<void> {

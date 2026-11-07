@@ -248,7 +248,10 @@ export default function ProviderDetailScreen() {
       });
 
       setBookingOpen(false);
-      router.push(`/booking/${booking.id}?justBooked=1`);
+      router.push({
+        pathname: '/booking/[id]',
+        params: { id: booking.id, justBooked: '1' },
+      });
     } catch (error) {
       Alert.alert('Booking failed', getErrorMessage(error));
     } finally {

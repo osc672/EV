@@ -47,6 +47,8 @@ interface ParsedMarker {
   draggable?: boolean;
   isUserLocation?: boolean;
   isDestination?: boolean;
+  isEtaBadge?: boolean;
+  etaText?: string;
   onPress?: () => void;
   onDragEnd?: (coord: { latitude: number; longitude: number }) => void;
 }
@@ -154,6 +156,25 @@ const NAVIGATION_MAP_HTML = `<!DOCTYPE html>
     .ev-station-pin.busy {
       background: #D97706;
       box-shadow: 0 4px 14px rgba(0,0,0,0.35), 0 0 10px rgba(217,119,6,0.4);
+    }
+
+    /* ETA Route Midpoint Badge (matches Google Maps / Rapido driving route pill) */
+    .ev-eta-badge {
+      background: #1D4ED8;
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 9px;
+      border-radius: 12px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+      border: 1.5px solid #FFFFFF;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      pointer-events: none;
+      letter-spacing: 0.2px;
     }
   </style>
 </head>
@@ -293,6 +314,10 @@ const NAVIGATION_MAP_HTML = `<!DOCTYPE html>
             iconHtml = '<div class="ev-destination-pin"><div class="pin-head"><div class="pin-dot"></div></div></div>';
             iconSize = [28, 38];
             iconAnchor = [14, 38];
+          } else if (m.isEtaBadge) {
+            iconHtml = '<div class="ev-eta-badge">' + (m.etaText || m.title || 'ETA') + '</div>';
+            iconSize = [58, 26];
+            iconAnchor = [29, 13];
           } else {
             var isBusy = m.pinColor === '#F59E0B' || m.pinColor === 'amber' || m.pinColor === '#EF4444';
             iconHtml = '<div class="ev-station-pin ' + (isBusy ? 'busy' : '') + '">⚡</div>';
@@ -462,6 +487,16 @@ export const AppMapView = forwardRef<AppMapViewHandle, AppMapViewProps>((props, 
             p.pinColor === 'red'
           );
 
+          const isEta = Boolean(
+            p.isEtaBadge ||
+            titleLower.includes('min') ||
+            titleLower.includes('eta') ||
+            descLower.includes('min') ||
+            descLower.includes('eta')
+          );
+
+          const etaContent = p.etaText || (isEta ? p.title || p.description : undefined);
+
           markers.push({
             id: markerId,
             latitude: p.coordinate.latitude,
@@ -472,6 +507,8 @@ export const AppMapView = forwardRef<AppMapViewHandle, AppMapViewProps>((props, 
             draggable: p.draggable,
             isUserLocation: isUser,
             isDestination: isDest,
+            isEtaBadge: isEta,
+            etaText: etaContent,
           });
 
           callbacks.set(markerId, {

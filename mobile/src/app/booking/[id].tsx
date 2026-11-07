@@ -763,6 +763,9 @@ export default function BookingDetailScreen() {
                         coordinate={routePoints[Math.floor(routePoints.length / 2)]}
                         anchor={{ x: 0.5, y: 0.5 }}
                         tracksViewChanges={false}
+                        isEtaBadge={true}
+                        etaText={`${drivingMinutes} min`}
+                        title={`${drivingMinutes} min`}
                       >
                         <View style={styles.routeEtaBadge}>
                           <Text style={styles.routeEtaBadgeText}>{drivingMinutes} min</Text>
