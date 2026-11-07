@@ -767,139 +767,7 @@ function DriverHomeScreen() {
         </Pressable>
       </View>
 
-      {/* OLA / RAPIDO BOTTOM SHEET SECTION */}
-      <View style={styles.rapidoSheetCard}>
-        {/* Large "Enter Destination" Search Bar (Ola/Rapido style with green border) */}
-        <Pressable
-          style={styles.rapidoSearchPill}
-          onPress={() => router.push('/(app)/search')}
-        >
-          <MaterialCommunityIcons name="magnify" size={24} color="#059669" />
-          <Text style={styles.rapidoSearchPlaceholder}>Enter Destination</Text>
-        </Pressable>
-
-        {/* Nearby Charging Stations List (replaces dummy taxi destinations) */}
-        <View style={styles.rapidoRecentList}>
-          {providers && providers.length > 0 ? (
-            providers.slice(0, 3).map((station, idx) => {
-              const distText =
-                station.location.distanceKm !== undefined
-                  ? station.location.distanceKm < 1
-                    ? `${Math.round(station.location.distanceKm * 1000)}m away`
-                    : `${station.location.distanceKm.toFixed(1)} km away`
-                  : 'Nearby';
-              const isTop = station.subscriptionPlan === 'YEAR_1' || station.planPriority === 3;
-              const isSelected = selectedProvider?.id === station.id;
-
-              return (
-                <Pressable
-                  key={station.id}
-                  style={[
-                    styles.rapidoRecentRow,
-                    idx < Math.min(providers.length, 3) - 1 && styles.rapidoRecentRowBorder,
-                    isSelected && { backgroundColor: '#F0FDF4' },
-                  ]}
-                  onPress={() => onSelectProvider(station)}
-                >
-                  <View
-                    style={[
-                      styles.rapidoClockIconBox,
-                      { backgroundColor: isTop ? '#FEF3C7' : '#ECFDF5' },
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name={isTop ? 'star' : 'ev-station'}
-                      size={20}
-                      color={isTop ? '#D97706' : '#059669'}
-                    />
-                  </View>
-                  <View style={styles.rapidoRecentTextWrap}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.rapidoRecentTitle} numberOfLines={1}>
-                        {station.businessName}
-                      </Text>
-                      {isTop ? (
-                        <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                          <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#B45309' }}>1st Pref ⭐</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <Text style={styles.rapidoRecentSubtitle} numberOfLines={1}>
-                      {distText} · {station.maxPowerKw} kW · {station.pricePerKwh ? `₹${station.pricePerKwh}/kWh` : 'Free'}
-                    </Text>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
-                </Pressable>
-              );
-            })
-          ) : (
-            DEFAULT_EV_QUICK_SEARCHES.map((item, idx) => (
-              <Pressable
-                key={item.id}
-                style={[
-                  styles.rapidoRecentRow,
-                  idx < DEFAULT_EV_QUICK_SEARCHES.length - 1 && styles.rapidoRecentRowBorder,
-                ]}
-                onPress={() => onSelectQuickSearch(item.action)}
-              >
-                <View style={[styles.rapidoClockIconBox, { backgroundColor: item.bgColor }]}>
-                  <MaterialCommunityIcons name={item.icon as any} size={20} color={item.iconColor} />
-                </View>
-                <View style={styles.rapidoRecentTextWrap}>
-                  <Text style={styles.rapidoRecentTitle} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  <Text style={styles.rapidoRecentSubtitle} numberOfLines={1}>
-                    {item.subtitle}
-                  </Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
-              </Pressable>
-            ))
-          )}
-        </View>
-
-        {/* Category Quick-Select Cards (Like Ola/Rapido Ride Types: Outstation, Rentals, Bike) */}
-        <View style={styles.rapidoCategoriesWrap}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.rapidoCategoriesScroll}
-          >
-            {RAPIDO_CATEGORIES.map((cat) => {
-              const isCatActive = activeCategory === cat.id;
-              return (
-                <Pressable
-                  key={cat.id}
-                  onPress={() => onSelectCategory(cat.id)}
-                  style={[
-                    styles.rapidoCategoryCard,
-                    isCatActive && styles.rapidoCategoryCardActive,
-                  ]}
-                >
-                  <View style={[styles.rapidoCategoryIconCircle, { backgroundColor: cat.bgColor }]}>
-                    <MaterialCommunityIcons name={cat.icon as any} size={22} color={cat.iconColor} />
-                  </View>
-                  <Text
-                    style={[
-                      styles.rapidoCategoryLabel,
-                      isCatActive && styles.rapidoCategoryLabelActive,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {cat.label}
-                  </Text>
-                  <View style={[styles.rapidoCategoryBadge, { backgroundColor: cat.badgeColor }]}>
-                    <Text style={styles.rapidoCategoryBadgeText}>{cat.badge}</Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      </View>
-
-      {/* ACTIVE BOOKING CARD */}
+      {/* ACTIVE BOOKING CARD (Placed immediately below map so confirmed slot and directions are always in full view) */}
       {activeBooking ? (
         <View style={styles.activeBookingCard}>
           <View style={styles.activeCardHeader}>
@@ -933,17 +801,19 @@ function DriverHomeScreen() {
                     : 'AWAITING CONFIRMATION'}
                 </Text>
               </View>
-              <Text style={styles.activeBookingCode}>#{activeBooking.code || activeBooking.id.slice(0, 8)}</Text>
+              <Text style={styles.activeBookingCode} numberOfLines={1}>
+                #{activeBooking.code || activeBooking.id.slice(0, 8)}
+              </Text>
             </View>
 
-            <Text style={styles.activeStationTitle}>
+            <Text style={styles.activeStationTitle} numberOfLines={1}>
               {activeBooking.provider?.businessName ?? 'Booked Charging Station'}
             </Text>
-            <Text style={styles.activeStationAddress}>
+            <Text style={styles.activeStationAddress} numberOfLines={1}>
               {activeBooking.provider?.addressLine ? `${activeBooking.provider.addressLine}, ` : ''}
               {activeBooking.provider?.city ?? ''}
             </Text>
-            <Text style={styles.activeSlotTime}>
+            <Text style={styles.activeSlotTime} numberOfLines={1}>
               Slot: {formatDateTime(activeBooking.scheduledAt)}
             </Text>
           </View>
@@ -971,7 +841,7 @@ function DriverHomeScreen() {
 
             <View style={styles.activeMetricItem}>
               <MaterialCommunityIcons name="ev-plug-type2" size={18} color="#2563EB" />
-              <Text style={styles.activeMetricValue}>
+              <Text style={styles.activeMetricValue} numberOfLines={1}>
                 {CONNECTOR_LABELS[activeBooking.connectorType] ?? activeBooking.connectorType}
               </Text>
               <Text style={styles.activeMetricLabel}>Connector</Text>
@@ -1105,6 +975,138 @@ function DriverHomeScreen() {
           </View>
         </View>
       ) : null}
+
+      {/* OLA / RAPIDO BOTTOM SHEET SECTION */}
+      <View style={styles.rapidoSheetCard}>
+        {/* Large "Enter Destination" Search Bar (Ola/Rapido style with green border) */}
+        <Pressable
+          style={styles.rapidoSearchPill}
+          onPress={() => router.push('/(app)/search')}
+        >
+          <MaterialCommunityIcons name="magnify" size={24} color="#059669" />
+          <Text style={styles.rapidoSearchPlaceholder}>Enter Destination</Text>
+        </Pressable>
+
+        {/* Nearby Charging Stations List (replaces dummy taxi destinations) */}
+        <View style={styles.rapidoRecentList}>
+          {providers && providers.length > 0 ? (
+            providers.slice(0, 3).map((station, idx) => {
+              const distText =
+                station.location.distanceKm !== undefined
+                  ? station.location.distanceKm < 1
+                    ? `${Math.round(station.location.distanceKm * 1000)}m away`
+                    : `${station.location.distanceKm.toFixed(1)} km away`
+                  : 'Nearby';
+              const isTop = station.subscriptionPlan === 'YEAR_1' || station.planPriority === 3;
+              const isSelected = selectedProvider?.id === station.id;
+
+              return (
+                <Pressable
+                  key={station.id}
+                  style={[
+                    styles.rapidoRecentRow,
+                    idx < Math.min(providers.length, 3) - 1 && styles.rapidoRecentRowBorder,
+                    isSelected && { backgroundColor: '#F0FDF4' },
+                  ]}
+                  onPress={() => onSelectProvider(station)}
+                >
+                  <View
+                    style={[
+                      styles.rapidoClockIconBox,
+                      { backgroundColor: isTop ? '#FEF3C7' : '#ECFDF5' },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={isTop ? 'star' : 'ev-station'}
+                      size={20}
+                      color={isTop ? '#D97706' : '#059669'}
+                    />
+                  </View>
+                  <View style={styles.rapidoRecentTextWrap}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={styles.rapidoRecentTitle} numberOfLines={1}>
+                        {station.businessName}
+                      </Text>
+                      {isTop ? (
+                        <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#B45309' }}>1st Pref ⭐</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text style={styles.rapidoRecentSubtitle} numberOfLines={1}>
+                      {distText} · {station.maxPowerKw} kW · {station.pricePerKwh ? `₹${station.pricePerKwh}/kWh` : 'Free'}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
+                </Pressable>
+              );
+            })
+          ) : (
+            DEFAULT_EV_QUICK_SEARCHES.map((item, idx) => (
+              <Pressable
+                key={item.id}
+                style={[
+                  styles.rapidoRecentRow,
+                  idx < DEFAULT_EV_QUICK_SEARCHES.length - 1 && styles.rapidoRecentRowBorder,
+                ]}
+                onPress={() => onSelectQuickSearch(item.action)}
+              >
+                <View style={[styles.rapidoClockIconBox, { backgroundColor: item.bgColor }]}>
+                  <MaterialCommunityIcons name={item.icon as any} size={20} color={item.iconColor} />
+                </View>
+                <View style={styles.rapidoRecentTextWrap}>
+                  <Text style={styles.rapidoRecentTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.rapidoRecentSubtitle} numberOfLines={1}>
+                    {item.subtitle}
+                  </Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={20} color="#94A3B8" />
+              </Pressable>
+            ))
+          )}
+        </View>
+
+        {/* Category Quick-Select Cards (Like Ola/Rapido Ride Types: Outstation, Rentals, Bike) */}
+        <View style={styles.rapidoCategoriesWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.rapidoCategoriesScroll}
+          >
+            {RAPIDO_CATEGORIES.map((cat) => {
+              const isCatActive = activeCategory === cat.id;
+              return (
+                <Pressable
+                  key={cat.id}
+                  onPress={() => onSelectCategory(cat.id)}
+                  style={[
+                    styles.rapidoCategoryCard,
+                    isCatActive && styles.rapidoCategoryCardActive,
+                  ]}
+                >
+                  <View style={[styles.rapidoCategoryIconCircle, { backgroundColor: cat.bgColor }]}>
+                    <MaterialCommunityIcons name={cat.icon as any} size={22} color={cat.iconColor} />
+                  </View>
+                  <Text
+                    style={[
+                      styles.rapidoCategoryLabel,
+                      isCatActive && styles.rapidoCategoryLabelActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {cat.label}
+                  </Text>
+                  <View style={[styles.rapidoCategoryBadge, { backgroundColor: cat.badgeColor }]}>
+                    <Text style={styles.rapidoCategoryBadgeText}>{cat.badge}</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </View>
 
       {showFallbackBanner ? (
         <View style={styles.banner}>

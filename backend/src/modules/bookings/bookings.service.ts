@@ -221,8 +221,7 @@ export async function listBookings(
     pageSize: params.pageSize,
     totalPages: Math.ceil(total / params.pageSize),
   };
-  appCache.set(cacheKey, result, 6000); // 6 second cache
-  appCache.delByPrefix('bookings-list:');
+  appCache.set(cacheKey, result, 10_000); // 10 second cache
   return result;
 }
 
@@ -347,14 +346,20 @@ export async function updateStatus(
   const isToday = booking.scheduledAt.toDateString() === new Date().toDateString();
   const timeDisplay = isToday ? `Today at ${slotTimeStr}` : `${booking.scheduledAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at ${slotTimeStr}`;
 
+  const isDeclinedByHost = isProvider && (next === 'CANCELLED' || next === 'NO_SHOW');
+
   const notifTitle = next === 'CONFIRMED'
     ? 'Charging slot confirmed'
-    : next === 'CANCELLED'
-      ? 'Booking cancelled'
-      : `Booking ${next.toLowerCase()}`;
+    : isDeclinedByHost
+      ? 'Charging request declined'
+      : next === 'CANCELLED'
+        ? 'Booking cancelled by driver'
+        : `Booking ${next.toLowerCase()}`;
   const notifBody = next === 'CONFIRMED'
     ? `Your charging slot at ${booking.provider.businessName} is confirmed for ${timeDisplay}. Charger is ready.`
-    : `Booking ${booking.code} is now ${next.replace('_', ' ').toLowerCase()}.`;
+    : isDeclinedByHost
+      ? `Your charging request at ${booking.provider.businessName} was declined${input.cancelReason ? ': ' + input.cancelReason : '. Please choose another charging point nearby.'}`
+      : `Booking ${booking.code} is now ${next.replace('_', ' ').toLowerCase()}.`;
 
   if (recipientId) {
     try {
@@ -363,7 +368,7 @@ export async function updateStatus(
           userId: recipientId,
           title: notifTitle,
           body: notifBody,
-          data: { bookingId, type: `BOOKING_${next}` },
+          data: { bookingId, type: isDeclinedByHost ? 'BOOKING_DECLINED' : `BOOKING_${next}` },
         },
       });
     } catch {}
@@ -372,7 +377,7 @@ export async function updateStatus(
       body: notifBody,
       data: {
         bookingId,
-        type: `BOOKING_${next}`,
+        type: isDeclinedByHost ? 'BOOKING_DECLINED' : `BOOKING_${next}`,
         driverId: booking.driverId,
         providerUserId: booking.provider.userId,
       },
@@ -426,7 +431,18 @@ export async function updateStatus(
       });
       broadcastStationStatus(booking.providerId, true);
     } else if (next === 'CANCELLED' || next === 'NO_SHOW') {
-      emitToBooking(bookingId, 'booking:cancelled', { bookingId, reason: input.cancelReason });
+      const cancelPayload = {
+        bookingId,
+        reason: input.cancelReason,
+        title: notifTitle,
+        body: notifBody,
+        isDeclinedByHost,
+        booking: finalBooking,
+      };
+      emitToBooking(bookingId, 'booking:cancelled', cancelPayload);
+      if (recipientId) {
+        emitToUser(recipientId, 'booking:cancelled', cancelPayload);
+      }
       broadcastStationStatus(booking.providerId, true);
     }
   }

@@ -31,7 +31,7 @@ import { palette, radius, spacing } from '@/theme';
 import type { Booking } from '@/types/api';
 
 export interface ActiveAlertModalData {
-  type: 'PROVIDER_REQUEST' | 'DRIVER_CONFIRMED' | 'GENERAL';
+  type: 'PROVIDER_REQUEST' | 'DRIVER_CONFIRMED' | 'DRIVER_DECLINED' | 'GENERAL';
   title: string;
   subtitle: string;
   detailHighlight?: string;
@@ -143,7 +143,7 @@ export function NotificationVoiceManager() {
    */
   const triggerNotificationAlert = useCallback(
     (
-      type: 'PROVIDER_REQUEST' | 'DRIVER_CONFIRMED' | 'GENERAL',
+      type: 'PROVIDER_REQUEST' | 'DRIVER_CONFIRMED' | 'DRIVER_DECLINED' | 'GENERAL',
       title: string,
       body: string,
       bookingId?: string,
@@ -162,7 +162,7 @@ export function NotificationVoiceManager() {
       (triggerNotificationAlert as any)._lastKey = burstKey;
       lastAnnounceTimeRef.current = now;
 
-      const shouldPlaySound = type === 'PROVIDER_REQUEST' || type === 'DRIVER_CONFIRMED';
+      const shouldPlaySound = type === 'PROVIDER_REQUEST' || type === 'DRIVER_CONFIRMED' || type === 'DRIVER_DECLINED';
 
       if (shouldPlaySound) {
         // 1. Play alert chime & haptics
@@ -241,11 +241,35 @@ export function NotificationVoiceManager() {
   );
 
   const handleBookingCancelled = useCallback(
-    (data: { bookingId: string; booking?: Booking }) => {
+    (data: { bookingId: string; booking?: Booking; title?: string; body?: string; reason?: string; isDeclinedByHost?: boolean }) => {
       const key = `booking_cancelled_${data.bookingId}`;
+      if (globalAnnouncedKeys.has(key)) return;
       globalAnnouncedKeys.add(key);
+
+      const stationName = data.booking?.provider?.businessName || 'the charging station';
+      const title = data.title || 'Charging request declined';
+      const body =
+        data.body ||
+        (data.reason
+          ? `Your charging request at ${stationName} was declined: ${data.reason}`
+          : `Your charging request at ${stationName} was declined by the host. Please choose another station.`);
+
+      triggerNotificationAlert(
+        'DRIVER_DECLINED',
+        title,
+        body,
+        data.bookingId,
+        undefined,
+        'Booking Declined / Cancelled',
+        'Tap to search and find other nearby stations',
+      );
+
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list('driver') });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(data.bookingId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.unread() });
     },
-    [],
+    [triggerNotificationAlert, queryClient],
   );
 
   const handleNotification = useCallback(
@@ -390,8 +414,11 @@ export function NotificationVoiceManager() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list() });
     }
     const id = alertData?.bookingId;
+    const isDeclined = alertData?.type === 'DRIVER_DECLINED';
     setAlertData(null);
-    if (id) {
+    if (isDeclined) {
+      router.push('/(app)/search');
+    } else if (id) {
       router.push(`/booking/${id}`);
     } else {
       router.push('/notifications');
@@ -404,6 +431,7 @@ export function NotificationVoiceManager() {
 
   const isRequest = alertData.type === 'PROVIDER_REQUEST';
   const isConfirmed = alertData.type === 'DRIVER_CONFIRMED';
+  const isDeclined = alertData.type === 'DRIVER_DECLINED';
 
   return (
     <Modal
@@ -429,14 +457,42 @@ export function NotificationVoiceManager() {
           <Pressable onPress={onOpenBooking} style={styles.cardInnerPressable}>
             {/* Top row: badge + close icon */}
             <View style={styles.headerRow}>
-              <View style={[styles.typeBadge, isRequest ? styles.badgeRequest : styles.badgeConfirmed]}>
+              <View
+                style={[
+                  styles.typeBadge,
+                  isRequest
+                    ? styles.badgeRequest
+                    : isConfirmed
+                    ? styles.badgeConfirmed
+                    : isDeclined
+                    ? { backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#FCA5A5' }
+                    : styles.badgeConfirmed,
+                ]}
+              >
                 <MaterialCommunityIcons
-                  name="volume-high"
+                  name={isDeclined ? 'close-circle' : 'volume-high'}
                   size={14}
-                  color={isRequest ? '#92400E' : '#065F46'}
+                  color={isRequest ? '#92400E' : isConfirmed ? '#065F46' : isDeclined ? '#DC2626' : '#065F46'}
                 />
-                <Text style={[styles.typeBadgeText, isRequest ? styles.textRequest : styles.textConfirmed]}>
-                  {isRequest ? 'RAPIDO VOICE ALERT' : isConfirmed ? 'SLOT CONFIRMED' : 'LIVE NOTIFICATION'}
+                <Text
+                  style={[
+                    styles.typeBadgeText,
+                    isRequest
+                      ? styles.textRequest
+                      : isConfirmed
+                      ? styles.textConfirmed
+                      : isDeclined
+                      ? { color: '#DC2626' }
+                      : styles.textConfirmed,
+                  ]}
+                >
+                  {isRequest
+                    ? 'RAPIDO VOICE ALERT'
+                    : isConfirmed
+                    ? 'SLOT CONFIRMED'
+                    : isDeclined
+                    ? 'REQUEST DECLINED'
+                    : 'LIVE NOTIFICATION'}
                 </Text>
               </View>
 
@@ -450,13 +506,31 @@ export function NotificationVoiceManager() {
               <View
                 style={[
                   styles.iconWrap,
-                  { backgroundColor: isRequest ? '#FEF3C7' : isConfirmed ? '#ECFDF5' : '#EEF2FF' },
+                  {
+                    backgroundColor: isRequest
+                      ? '#FEF3C7'
+                      : isConfirmed
+                      ? '#ECFDF5'
+                      : isDeclined
+                      ? '#FEE2E2'
+                      : '#EEF2FF',
+                  },
                 ]}
               >
                 <MaterialCommunityIcons
-                  name={isRequest ? 'lightning-bolt-circle' : isConfirmed ? 'check-decagram' : 'bell-ring'}
+                  name={
+                    isRequest
+                      ? 'lightning-bolt-circle'
+                      : isConfirmed
+                      ? 'check-decagram'
+                      : isDeclined
+                      ? 'close-circle-outline'
+                      : 'bell-ring'
+                  }
                   size={26}
-                  color={isRequest ? '#D97706' : isConfirmed ? '#059669' : palette.primary}
+                  color={
+                    isRequest ? '#D97706' : isConfirmed ? '#059669' : isDeclined ? '#DC2626' : palette.primary
+                  }
                 />
               </View>
               <View style={styles.titleWrap}>
@@ -465,11 +539,17 @@ export function NotificationVoiceManager() {
               </View>
             </View>
 
-            {/* Detail Highlight (e.g., Driver Name & Slot Time) */}
+            {/* Detail Highlight */}
             {alertData.detailHighlight ? (
               <View style={styles.highlightCard}>
-                <MaterialCommunityIcons name="clock-time-four" size={16} color="#D97706" />
-                <Text style={styles.highlightText}>{alertData.detailHighlight}</Text>
+                <MaterialCommunityIcons
+                  name={isDeclined ? 'alert-circle-outline' : 'clock-time-four'}
+                  size={16}
+                  color={isDeclined ? '#DC2626' : '#D97706'}
+                />
+                <Text style={[styles.highlightText, isDeclined && { color: '#B91C1C' }]}>
+                  {alertData.detailHighlight}
+                </Text>
               </View>
             ) : null}
 
@@ -491,14 +571,14 @@ export function NotificationVoiceManager() {
             </Button>
             <Button
               mode="contained"
-              icon={isRequest ? 'lightning-bolt' : 'arrow-right'}
+              icon={isRequest ? 'lightning-bolt' : isDeclined ? 'magnify' : 'arrow-right'}
               onPress={onOpenBooking}
               style={styles.openBtn}
-              buttonColor={isRequest ? '#D97706' : '#059669'}
+              buttonColor={isRequest ? '#D97706' : isDeclined ? '#DC2626' : '#059669'}
               labelStyle={{ fontWeight: '800' }}
               compact
             >
-              {isRequest ? 'View & Respond' : 'View Details'}
+              {isRequest ? 'View & Accept' : isDeclined ? 'Find Charger' : 'View Details'}
             </Button>
           </View>
         </Animated.View>

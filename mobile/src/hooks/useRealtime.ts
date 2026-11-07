@@ -102,7 +102,7 @@ export function useRealtimeBooking(bookingId?: string) {
 export interface GlobalRealtimeHandlers {
   onIncomingBooking?: (booking: Booking, title?: string, body?: string) => void;
   onBookingConfirmed?: (booking: Booking, title?: string, body?: string) => void;
-  onBookingCancelled?: (data: { bookingId: string; booking?: Booking }) => void;
+  onBookingCancelled?: (data: { bookingId: string; booking?: Booking; title?: string; body?: string; reason?: string; isDeclinedByHost?: boolean }) => void;
   onNotification?: (notification: { id?: string; title: string; body: string; data?: any; booking?: Booking }) => void;
 }
 
@@ -176,7 +176,7 @@ export function useGlobalRealtimeEvents(handlersOrIncoming?: GlobalRealtimeHandl
       }
     };
 
-    const onCancelled = (payload: { bookingId: string; booking?: Booking }) => {
+    const onCancelled = (payload: { bookingId: string; booking?: Booking; title?: string; body?: string; reason?: string; isDeclinedByHost?: boolean }) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list('driver') });
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list('provider') });
       void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list() });

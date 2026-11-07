@@ -66,7 +66,7 @@ export default function BookingDetailScreen() {
 
   const [activePoll, setActivePoll] = useState(true);
   const { data: booking, isLoading, isError, refetch, isRefetching } = useBooking(bookingId, {
-    refetchInterval: activePoll ? 3000 : false,
+    refetchInterval: activePoll ? 15_000 : false,
   });
 
   // Connect to realtime room for live status changes
