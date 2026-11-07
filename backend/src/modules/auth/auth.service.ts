@@ -358,3 +358,51 @@ export async function changePassword(
     }),
   ]);
 }
+
+export async function ensureAdminUser(): Promise<void> {
+  try {
+    const adminPhone = env.ADMIN_PHONE || '+919999999999';
+    const adminEmail = env.ADMIN_EMAIL || 'admin@evrescue.local';
+    const adminPass = env.ADMIN_PASSWORD || 'Admin@12345';
+
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { phone: adminPhone },
+          { email: adminEmail },
+          { role: Role.ADMIN },
+        ],
+      },
+    });
+
+    const passwordHash = await bcrypt.hash(adminPass, 12);
+
+    if (!existing) {
+      await prisma.user.create({
+        data: {
+          phone: adminPhone,
+          email: adminEmail,
+          fullName: 'System Administrator',
+          passwordHash,
+          role: Role.ADMIN,
+          isPhoneVerified: true,
+          isActive: true,
+        },
+      });
+      logger.info('admin_user_created', { phone: adminPhone, email: adminEmail });
+    } else {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          role: Role.ADMIN,
+          passwordHash,
+          isActive: true,
+          isPhoneVerified: true,
+        },
+      });
+      logger.info('admin_user_verified', { phone: existing.phone });
+    }
+  } catch (err) {
+    logger.error('ensure_admin_user_failed', { error: (err as Error).message });
+  }
+}

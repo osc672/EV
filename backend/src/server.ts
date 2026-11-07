@@ -5,10 +5,12 @@ import { logger } from './lib/logger';
 import { connectDatabase, disconnectDatabase } from './lib/prisma';
 import { initSocketServer } from './lib/socket';
 import { ensureProvidersApproved } from './modules/providers/providers.service';
+import { ensureAdminUser } from './modules/auth/auth.service';
 
 async function main() {
   await connectDatabase();
   await ensureProvidersApproved();
+  await ensureAdminUser();
 
   const app = createApp();
   const server = createServer(app);
