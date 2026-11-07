@@ -56,42 +56,43 @@ export async function createBooking(driverId: string, input: CreateBookingInput)
     throw new BadRequestError('Invalid scheduled time');
   }
 
-  const booking = await prisma.$transaction(async (tx) => {
-    // Reject overlapping active bookings within a 60 minute window.
-    const windowStart = new Date(scheduledAt.getTime() - 60 * 60 * 1000);
-    const windowEnd = new Date(scheduledAt.getTime() + 60 * 60 * 1000);
-    const conflict = await tx.booking.findFirst({
-      where: {
-        providerId: provider.id,
-        status: { in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
-        scheduledAt: { gte: windowStart, lte: windowEnd },
-      },
-    });
-    if (conflict) {
-      throw new ConflictError('This provider already has a booking around that time');
-    }
+  // Reject overlapping active bookings within a 60 minute window.
+  const windowStart = new Date(scheduledAt.getTime() - 60 * 60 * 1000);
+  const windowEnd = new Date(scheduledAt.getTime() + 60 * 60 * 1000);
+  const conflict = await prisma.booking.findFirst({
+    where: {
+      providerId: provider.id,
+      status: { in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
+      scheduledAt: { gte: windowStart, lte: windowEnd },
+    },
+  });
+  if (conflict) {
+    throw new ConflictError('This provider already has a booking around that time');
+  }
 
-    const created = await tx.booking.create({
-      data: {
-        code: randomBookingCode(),
-        driverId,
-        providerId: provider.id,
-        vehicleId: input.vehicleId,
-        connectorType: input.connectorType,
-        scheduledAt,
-        notes: input.notes,
-      },
-      include: bookingInclude,
-    });
+  const created = await prisma.booking.create({
+    data: {
+      code: randomBookingCode(),
+      driverId,
+      providerId: provider.id,
+      vehicleId: input.vehicleId,
+      connectorType: input.connectorType,
+      scheduledAt,
+      notes: input.notes,
+    },
+    include: bookingInclude,
+  });
 
-    const slotTimeStr = scheduledAt.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
-    const isToday = scheduledAt.toDateString() === new Date().toDateString();
-    const timeDisplay = isToday ? `Today at ${slotTimeStr}` : `${scheduledAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at ${slotTimeStr}`;
+  const slotTimeStr = scheduledAt.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const isToday = scheduledAt.toDateString() === new Date().toDateString();
+  const timeDisplay = isToday ? `Today at ${slotTimeStr}` : `${scheduledAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at ${slotTimeStr}`;
 
-    const notifTitle = 'New charging request';
-    const notifBody = `${created.driver.fullName} requested a charging slot for ${timeDisplay}. Please confirm or decline.`;
+  const notifTitle = 'New charging request';
+  const notifBody = `${created.driver.fullName} requested a charging slot for ${timeDisplay}. Please confirm or decline.`;
 
-    const createdNotif = await tx.notification.create({
+  let notifId: string = '';
+  try {
+    const createdNotif = await prisma.notification.create({
       data: {
         userId: provider.userId,
         title: notifTitle,
@@ -99,9 +100,12 @@ export async function createBooking(driverId: string, input: CreateBookingInput)
         data: { bookingId: created.id, type: 'BOOKING_CREATED' },
       },
     });
+    notifId = createdNotif.id;
+  } catch {
+    // If notification creation fails, continue cleanly since booking is created
+  }
 
-    return { created, notifTitle, notifBody, notifId: createdNotif.id };
-  });
+  const booking = { created, notifTitle, notifBody, notifId };
 
   const geo = await getGeoPoint(provider.id);
   const result = {
@@ -276,73 +280,75 @@ export async function updateStatus(
     throw new ForbiddenError('Only the provider can advance this booking');
   }
 
-  return prisma.$transaction(async (tx) => {
-    const data: Prisma.BookingUpdateInput = { status: next };
+  const data: Prisma.BookingUpdateInput = { status: next };
 
-    if (next === 'CONFIRMED') {
-      data.startedAt = booking.startedAt ?? undefined;
-    }
-    if (next === 'IN_PROGRESS') {
-      data.startedAt = booking.startedAt ?? new Date();
-    }
-    if (next === 'CANCELLED') {
-      data.cancelledAt = new Date();
-      data.cancelReason = input.cancelReason;
-    }
+  if (next === 'CONFIRMED') {
+    data.startedAt = booking.startedAt ?? undefined;
+  }
+  if (next === 'IN_PROGRESS') {
+    data.startedAt = booking.startedAt ?? new Date();
+  }
+  if (next === 'CANCELLED') {
+    data.cancelledAt = new Date();
+    data.cancelReason = input.cancelReason;
+  }
 
-    if (next === 'COMPLETED') {
-      const now = new Date();
-      const startTime = booking.startedAt ? new Date(booking.startedAt) : new Date(now.getTime() - 15 * 60 * 1000);
-      const elapsedHours = Math.max(1 / 60, (now.getTime() - startTime.getTime()) / (3600 * 1000));
-      const powerKw = booking.provider.maxPowerKw ?? 3;
-      const calculatedKwh = Math.round(elapsedHours * powerKw * 100) / 100;
-      const kwh = input.kwhDelivered !== undefined && input.kwhDelivered > 0 ? input.kwhDelivered : calculatedKwh;
-      const rate = booking.provider.pricePerKwh ? Number(booking.provider.pricePerKwh) : 20;
-      const total = Math.max(20, Math.round(kwh * rate * 100) / 100);
-      data.completedAt = now;
-      data.kwhDelivered = kwh;
-      data.totalAmount = total;
-      data.estimatedCost = total;
-      data.paymentStatus = 'PENDING';
+  if (next === 'COMPLETED') {
+    const now = new Date();
+    const startTime = booking.startedAt ? new Date(booking.startedAt) : new Date(now.getTime() - 15 * 60 * 1000);
+    const elapsedHours = Math.max(1 / 60, (now.getTime() - startTime.getTime()) / (3600 * 1000));
+    const powerKw = booking.provider.maxPowerKw ?? 3;
+    const calculatedKwh = Math.round(elapsedHours * powerKw * 100) / 100;
+    const kwh = input.kwhDelivered !== undefined && input.kwhDelivered > 0 ? input.kwhDelivered : calculatedKwh;
+    const rate = booking.provider.pricePerKwh ? Number(booking.provider.pricePerKwh) : 20;
+    const total = Math.max(20, Math.round(kwh * rate * 100) / 100);
+    data.completedAt = now;
+    data.kwhDelivered = kwh;
+    data.totalAmount = total;
+    data.estimatedCost = total;
+    data.paymentStatus = 'PENDING';
 
-      // Do NOT auto-mark as PAID! Payment must be collected via Cash or Scanner payment gateway.
-      await tx.providerProfile.update({
+    // Do NOT auto-mark as PAID! Payment must be collected via Cash or Scanner payment gateway.
+    try {
+      await prisma.providerProfile.update({
         where: { id: booking.providerId },
         data: { totalBookings: { increment: 1 } },
       });
-    }
+    } catch {}
+  }
 
-    // Optimistic guard against concurrent transitions.
-    const result = await tx.booking.updateMany({
-      where: { id: bookingId, status: booking.status },
-      data,
-    });
-    if (result.count === 0) {
-      throw new ConflictError('Booking was modified by another request. Refresh and retry.');
-    }
+  // Optimistic guard against concurrent transitions.
+  const updateResult = await prisma.booking.updateMany({
+    where: { id: bookingId, status: booking.status },
+    data,
+  });
+  if (updateResult.count === 0) {
+    throw new ConflictError('Booking was modified by another request. Refresh and retry.');
+  }
 
-    const updated = await tx.booking.findUnique({
-      where: { id: bookingId },
-      include: bookingInclude,
-    });
+  const updated = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: bookingInclude,
+  });
 
-    // Notify the counterparty.
-    const recipientId = isProvider ? booking.driverId : booking.provider.userId;
-    const slotTimeStr = booking.scheduledAt.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
-    const isToday = booking.scheduledAt.toDateString() === new Date().toDateString();
-    const timeDisplay = isToday ? `Today at ${slotTimeStr}` : `${booking.scheduledAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at ${slotTimeStr}`;
+  // Notify the counterparty.
+  const recipientId = isProvider ? booking.driverId : booking.provider.userId;
+  const slotTimeStr = booking.scheduledAt.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const isToday = booking.scheduledAt.toDateString() === new Date().toDateString();
+  const timeDisplay = isToday ? `Today at ${slotTimeStr}` : `${booking.scheduledAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at ${slotTimeStr}`;
 
-    const notifTitle = next === 'CONFIRMED'
-      ? 'Charging slot confirmed'
-      : next === 'CANCELLED'
-        ? 'Booking cancelled'
-        : `Booking ${next.toLowerCase()}`;
-    const notifBody = next === 'CONFIRMED'
-      ? `Your charging slot at ${booking.provider.businessName} is confirmed for ${timeDisplay}. Charger is ready.`
-      : `Booking ${booking.code} is now ${next.replace('_', ' ').toLowerCase()}.`;
+  const notifTitle = next === 'CONFIRMED'
+    ? 'Charging slot confirmed'
+    : next === 'CANCELLED'
+      ? 'Booking cancelled'
+      : `Booking ${next.toLowerCase()}`;
+  const notifBody = next === 'CONFIRMED'
+    ? `Your charging slot at ${booking.provider.businessName} is confirmed for ${timeDisplay}. Charger is ready.`
+    : `Booking ${booking.code} is now ${next.replace('_', ' ').toLowerCase()}.`;
 
-    if (recipientId) {
-      await tx.notification.create({
+  if (recipientId) {
+    try {
+      await prisma.notification.create({
         data: {
           userId: recipientId,
           title: notifTitle,
@@ -350,64 +356,64 @@ export async function updateStatus(
           data: { bookingId, type: `BOOKING_${next}` },
         },
       });
-      emitToUser(recipientId, 'notification:received', {
+    } catch {}
+    emitToUser(recipientId, 'notification:received', {
+      title: notifTitle,
+      body: notifBody,
+      data: { bookingId, type: `BOOKING_${next}` },
+      booking: updated,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  const geo = updated ? await getGeoPoint(updated.providerId) : null;
+  const finalBooking = updated
+    ? {
+      ...updated,
+      provider: {
+        ...updated.provider,
+        location: geo,
+      },
+    }
+    : null;
+
+  if (finalBooking) {
+    // Real-time broadcast to both driver & host in the booking room
+    emitToBooking(bookingId, 'booking:status_changed', {
+      bookingId,
+      status: next,
+      booking: finalBooking,
+    });
+
+    if (next === 'CONFIRMED') {
+      emitToBooking(bookingId, 'booking:confirmed', {
+        bookingId,
+        booking: finalBooking,
         title: notifTitle,
         body: notifBody,
-        data: { bookingId, type: `BOOKING_${next}` },
-        booking: updated,
-        createdAt: new Date().toISOString(),
       });
-    }
-
-    const geo = updated ? await getGeoPoint(updated.providerId) : null;
-    const finalBooking = updated
-      ? {
-        ...updated,
-        provider: {
-          ...updated.provider,
-          location: geo,
-        },
-      }
-      : null;
-
-    if (finalBooking) {
-      // Real-time broadcast to both driver & host in the booking room
-      emitToBooking(bookingId, 'booking:status_changed', {
+      emitToUser(booking.driverId, 'booking:confirmed', {
         bookingId,
-        status: next,
         booking: finalBooking,
+        title: notifTitle,
+        body: notifBody,
       });
-
-      if (next === 'CONFIRMED') {
-        emitToBooking(bookingId, 'booking:confirmed', {
-          bookingId,
-          booking: finalBooking,
-          title: notifTitle,
-          body: notifBody,
-        });
-        emitToUser(booking.driverId, 'booking:confirmed', {
-          bookingId,
-          booking: finalBooking,
-          title: notifTitle,
-          body: notifBody,
-        });
-      } else if (next === 'IN_PROGRESS') {
-        emitToBooking(bookingId, 'charging:started', { bookingId, startedAt: finalBooking.startedAt });
-      } else if (next === 'COMPLETED') {
-        emitToBooking(bookingId, 'charging:completed', {
-          bookingId,
-          kwhDelivered: input.kwhDelivered,
-          totalAmount: finalBooking.totalAmount,
-        });
-        broadcastStationStatus(booking.providerId, true);
-      } else if (next === 'CANCELLED' || next === 'NO_SHOW') {
-        emitToBooking(bookingId, 'booking:cancelled', { bookingId, reason: input.cancelReason });
-        broadcastStationStatus(booking.providerId, true);
-      }
+    } else if (next === 'IN_PROGRESS') {
+      emitToBooking(bookingId, 'charging:started', { bookingId, startedAt: finalBooking.startedAt });
+    } else if (next === 'COMPLETED') {
+      emitToBooking(bookingId, 'charging:completed', {
+        bookingId,
+        kwhDelivered: input.kwhDelivered,
+        totalAmount: finalBooking.totalAmount,
+      });
+      broadcastStationStatus(booking.providerId, true);
+    } else if (next === 'CANCELLED' || next === 'NO_SHOW') {
+      emitToBooking(bookingId, 'booking:cancelled', { bookingId, reason: input.cancelReason });
+      broadcastStationStatus(booking.providerId, true);
     }
+  }
 
-    return finalBooking;
-  });
+  return finalBooking;
 }
 
 export async function cancelBooking(userId: string, bookingId: string, reason?: string) {
@@ -431,32 +437,30 @@ export async function settleOfflinePayment(
 
   const amount = Number(booking.totalAmount ?? booking.estimatedCost ?? 150);
 
-  const updated = await prisma.$transaction(async (tx) => {
-    await tx.payment.upsert({
-      where: { bookingId },
-      create: {
-        bookingId,
-        amount,
-        method,
-        status: 'PAID',
-        gateway: method === 'UPI' ? 'upi_scanner' : 'cash_station',
-      },
-      update: {
-        amount,
-        method,
-        status: 'PAID',
-        gateway: method === 'UPI' ? 'upi_scanner' : 'cash_station',
-      },
-    });
+  await prisma.payment.upsert({
+    where: { bookingId },
+    create: {
+      bookingId,
+      amount,
+      method,
+      status: 'PAID',
+      gateway: method === 'UPI' ? 'upi_scanner' : 'cash_station',
+    },
+    update: {
+      amount,
+      method,
+      status: 'PAID',
+      gateway: method === 'UPI' ? 'upi_scanner' : 'cash_station',
+    },
+  });
 
-    return tx.booking.update({
-      where: { id: bookingId },
-      data: {
-        paymentStatus: 'PAID',
-        paymentMethod: method,
-      },
-      include: bookingInclude,
-    });
+  const updated = await prisma.booking.update({
+    where: { id: bookingId },
+    data: {
+      paymentStatus: 'PAID',
+      paymentMethod: method,
+    },
+    include: bookingInclude,
   });
 
   const geo = await getGeoPoint(booking.providerId);
