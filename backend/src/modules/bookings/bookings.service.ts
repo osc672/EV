@@ -176,7 +176,7 @@ export async function listBookings(
   }
   if (params.status) where.status = params.status;
 
-  const [total, items] = await prisma.$transaction([
+  const [total, items] = await Promise.all([
     prisma.booking.count({ where }),
     prisma.booking.findMany({
       where,

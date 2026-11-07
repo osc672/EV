@@ -37,16 +37,14 @@ router.post(
   authenticate,
   validate(vehicleSchema),
   asyncHandler(async (req, res) => {
-    const vehicle = await prisma.$transaction(async (tx) => {
-      if (req.body.isPrimary) {
-        await tx.vehicle.updateMany({
-          where: { userId: req.user!.id },
-          data: { isPrimary: false },
-        });
-      }
-      return tx.vehicle.create({
-        data: { ...req.body, userId: req.user!.id },
+    if (req.body.isPrimary) {
+      await prisma.vehicle.updateMany({
+        where: { userId: req.user!.id },
+        data: { isPrimary: false },
       });
+    }
+    const vehicle = await prisma.vehicle.create({
+      data: { ...req.body, userId: req.user!.id },
     });
     return created(res, vehicle);
   }),
@@ -60,15 +58,13 @@ router.patch(
     const existing = await prisma.vehicle.findUnique({ where: { id: param(req, 'id') } });
     if (!existing || existing.userId !== req.user!.id) throw new NotFoundError('Vehicle not found');
 
-    const vehicle = await prisma.$transaction(async (tx) => {
-      if (req.body.isPrimary) {
-        await tx.vehicle.updateMany({
-          where: { userId: req.user!.id },
-          data: { isPrimary: false },
-        });
-      }
-      return tx.vehicle.update({ where: { id: param(req, 'id') }, data: req.body });
-    });
+    if (req.body.isPrimary) {
+      await prisma.vehicle.updateMany({
+        where: { userId: req.user!.id },
+        data: { isPrimary: false },
+      });
+    }
+    const vehicle = await prisma.vehicle.update({ where: { id: param(req, 'id') }, data: req.body });
     return ok(res, vehicle);
   }),
 );

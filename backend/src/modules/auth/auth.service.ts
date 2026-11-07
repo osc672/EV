@@ -92,28 +92,32 @@ async function issueTokens(
   ) as { exp: number };
   const refreshTokenExpiresAt = new Date(decoded.exp * 1000);
 
-  await prisma.$transaction(async (tx) => {
-    if (previousTokenId) {
-      await tx.refreshToken.updateMany({
+  if (previousTokenId) {
+    try {
+      await prisma.refreshToken.updateMany({
         where: { id: previousTokenId, revokedAt: null },
         data: { revokedAt: new Date() },
       });
-    }
-    await tx.refreshToken.create({
-      data: {
-        id: tokenId,
-        tokenHash: sha256(refreshToken),
-        userId: user.id,
-        expiresAt: refreshTokenExpiresAt,
-        userAgent: meta.userAgent,
-        ip: meta.ip,
-      },
-    });
-    await tx.user.update({
+    } catch {}
+  }
+
+  await prisma.refreshToken.create({
+    data: {
+      id: tokenId,
+      tokenHash: sha256(refreshToken),
+      userId: user.id,
+      expiresAt: refreshTokenExpiresAt,
+      userAgent: meta.userAgent,
+      ip: meta.ip,
+    },
+  });
+
+  try {
+    await prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
-  });
+  } catch {}
 
   return {
     accessToken,

@@ -627,20 +627,18 @@ router.delete(
     const review = await prisma.review.findUnique({ where: { id: param(req, 'id') } });
     if (!review) throw new NotFoundError('Review not found');
 
-    await prisma.$transaction(async (tx) => {
-      await tx.review.delete({ where: { id: review.id } });
-      const agg = await tx.review.aggregate({
-        where: { providerId: review.providerId },
-        _avg: { rating: true },
-        _count: { rating: true },
-      });
-      await tx.providerProfile.update({
-        where: { id: review.providerId },
-        data: {
-          rating: Math.round((agg._avg.rating ?? 0) * 100) / 100,
-          totalReviews: agg._count.rating,
-        },
-      });
+    await prisma.review.delete({ where: { id: review.id } });
+    const agg = await prisma.review.aggregate({
+      where: { providerId: review.providerId },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+    await prisma.providerProfile.update({
+      where: { id: review.providerId },
+      data: {
+        rating: Math.round((agg._avg.rating ?? 0) * 100) / 100,
+        totalReviews: agg._count.rating,
+      },
     });
 
     return noContent(res);

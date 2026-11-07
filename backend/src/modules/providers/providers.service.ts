@@ -34,17 +34,26 @@ export async function setLocation(providerId: string, latitude: number, longitud
         "updatedAt" = NOW()
     WHERE id = ${providerId}
   `;
+  geoPointCache.delete(providerId);
 }
 
+const geoPointCache = new Map<string, { point: GeoPoint | null; expires: number }>();
+
 export async function getGeoPoint(providerId: string): Promise<GeoPoint | null> {
+  const cached = geoPointCache.get(providerId);
+  if (cached && cached.expires > Date.now()) {
+    return cached.point;
+  }
+
   const rows = await prisma.$queryRaw<{ lat: number; lng: number }[]>`
     SELECT ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng
     FROM "ProviderProfile"
     WHERE id = ${providerId} AND location IS NOT NULL
     LIMIT 1
   `;
-  if (!rows.length) return null;
-  return { latitude: Number(rows[0].lat), longitude: Number(rows[0].lng) };
+  const point = !rows.length ? null : { latitude: Number(rows[0].lat), longitude: Number(rows[0].lng) };
+  geoPointCache.set(providerId, { point, expires: Date.now() + 5 * 60 * 1000 });
+  return point;
 }
 
 export async function createProvider(userId: string, input: CreateProviderInput) {
@@ -185,7 +194,7 @@ export async function listProviders(params: {
       : {}),
   };
 
-  const [total, items] = await prisma.$transaction([
+  const [total, items] = await Promise.all([
     prisma.providerProfile.count({ where }),
     prisma.providerProfile.findMany({
       where,
