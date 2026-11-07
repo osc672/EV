@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import AppMapView, { Marker, Polyline } from '@/components/AppMapView';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Button, Chip, Dialog, Divider, Portal, TextInput } from 'react-native-paper';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -563,7 +563,7 @@ export default function ProviderDetailScreen() {
 
           {provider.location ? (
             <View style={styles.mapWrap}>
-              <MapView
+              <AppMapView
                 style={StyleSheet.absoluteFill}
                 region={mapRegion}
                 scrollEnabled={true}
@@ -597,7 +597,7 @@ export default function ProviderDetailScreen() {
                     strokeColor={palette.primary}
                   />
                 ) : null}
-              </MapView>
+              </AppMapView>
             </View>
           ) : null}
 

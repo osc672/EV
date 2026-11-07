@@ -33,7 +33,7 @@ import { uploadsApi } from '@/lib/endpoints';
 import { formatCurrency, formatDateTime, timeAgo } from '@/lib/format';
 import { palette, radius, spacing } from '@/theme';
 import type { Booking, DocumentType } from '@/types/api';
-import MapView, { Marker } from 'react-native-maps';
+import AppMapView, { Marker } from '@/components/AppMapView';
 
 const DOCUMENT_TYPES: { value: DocumentType; label: string }[] = [
   { value: 'ID_PROOF', label: 'ID proof' },
@@ -536,7 +536,7 @@ export default function ProviderDashboardScreen() {
 
         {provider.location ? (
           <View style={styles.dashboardMapWrap}>
-            <MapView
+            <AppMapView
               style={StyleSheet.absoluteFill}
               region={{
                 latitude: provider.location.latitude,
@@ -555,7 +555,7 @@ export default function ProviderDashboardScreen() {
                   longitude: provider.location.longitude,
                 }}
               />
-            </MapView>
+            </AppMapView>
           </View>
         ) : null}
 

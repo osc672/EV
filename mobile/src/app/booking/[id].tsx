@@ -16,7 +16,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Dialog, Portal, SegmentedButtons, TextInput } from 'react-native-paper';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import AppMapView, { Marker, Polyline } from '@/components/AppMapView';
 
 import { EmptyState } from '@/components/EmptyState';
 import { InfoRow } from '@/components/InfoRow';
@@ -689,7 +689,7 @@ export default function BookingDetailScreen() {
             ) : null}
 
             <View style={styles.mapWrap}>
-              <MapView
+              <AppMapView
                 style={StyleSheet.absoluteFill}
                 region={mapRegion}
                 scrollEnabled={true}
@@ -744,7 +744,7 @@ export default function BookingDetailScreen() {
                     ) : null}
                   </>
                 ) : null}
-              </MapView>
+              </AppMapView>
             </View>
 
             <Button

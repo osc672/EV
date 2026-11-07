@@ -26,7 +26,7 @@ import { useCurrentLocation } from '@/hooks/useLocation';
 import { getErrorMessage } from '@/lib/api';
 import { uploadsApi, usersApi, providersApi } from '@/lib/endpoints';
 import { useAuthStore } from '@/store/auth';
-import MapView, { Marker } from 'react-native-maps';
+import AppMapView, { Marker } from '@/components/AppMapView';
 import { CONNECTOR_LABELS, PROVIDER_TYPE_LABELS } from '@/lib/config';
 import { palette, radius, spacing } from '@/theme';
 import type { ConnectorType, ProviderType } from '@/types/api';
@@ -815,7 +815,7 @@ export default function ProviderSetupScreen() {
 
           {/* Mini Map Preview */}
           <View style={styles.miniMapWrap}>
-            <MapView
+            <AppMapView
               style={StyleSheet.absoluteFill}
               region={{
                 latitude: Number(latValue) || 16.5002,
@@ -834,7 +834,7 @@ export default function ProviderSetupScreen() {
                   longitude: Number(lngValue) || 80.648,
                 }}
               />
-            </MapView>
+            </AppMapView>
             <Pressable
               onPress={() => setMapModalVisible(true)}
               style={styles.miniMapOverlayBtn}

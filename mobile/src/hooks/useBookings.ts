@@ -4,17 +4,18 @@ import { queryKeys } from '@/lib/queryClient';
 import { useAuthStore } from '@/store/auth';
 import type { ConnectorType, PaymentMethod } from '@/types/api';
 
-export function useBookings(params: { role?: 'driver' | 'provider'; status?: string; enabled?: boolean }) {
+export function useBookings(params: { role?: 'driver' | 'provider'; status?: string; enabled?: boolean; pageSize?: number }) {
   const user = useAuthStore((s) => s.user);
   return useQuery({
     queryKey: queryKeys.bookings.list(params),
     queryFn: async () => {
-      const { data, meta } = await bookingsApi.list({ ...params, pageSize: 50 });
+      const { data, meta } = await bookingsApi.list({ ...params, pageSize: params.pageSize ?? 10 });
       return {
         items: data,
         total: Number(meta.total ?? data.length),
       };
     },
+    staleTime: 15_000,
     enabled: params.enabled !== undefined ? params.enabled && Boolean(user) : Boolean(user),
   });
 }

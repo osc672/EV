@@ -38,7 +38,12 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO",
         "android.permission.POST_NOTIFICATIONS"
-      ]
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDummyKeyForInitializationOnly123456"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png",

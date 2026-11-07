@@ -12,7 +12,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import MapView, { Marker, Region } from 'react-native-maps';
+import type { Region, default as MapView } from 'react-native-maps';
+import AppMapView, { Marker } from '@/components/AppMapView';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Button } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -213,9 +214,9 @@ export function LocationPickerModal({
           </Pressable>
         </View>
 
-        {/* Interactive Google Map Area */}
+        {/* Interactive Map Area */}
         <View style={styles.mapWrap}>
-          <MapView
+          <AppMapView
             ref={mapRef}
             style={StyleSheet.absoluteFill}
             initialRegion={{
@@ -243,7 +244,7 @@ export function LocationPickerModal({
                 <View style={styles.pinBaseDot} />
               </View>
             </Marker>
-          </MapView>
+          </AppMapView>
 
           {/* Floating Instruction Banner */}
           <View style={styles.floatingHint}>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, BackHandler, Image, Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import MapView, { Circle, Marker, Polyline } from 'react-native-maps';
+import type MapView from 'react-native-maps';
+import AppMapView, { Circle, Marker, Polyline } from '@/components/AppMapView';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Location from 'expo-location';
 import { ActivityIndicator, Button, Chip } from 'react-native-paper';
@@ -525,7 +526,7 @@ function DriverHomeScreen() {
 
       {/* OLA & RAPIDO STYLE MAP CANVAS */}
       <View style={styles.rapidoMapCard}>
-        <MapView
+        <AppMapView
           ref={mapRef}
           style={StyleSheet.absoluteFill}
           initialRegion={{
@@ -726,7 +727,7 @@ function DriverHomeScreen() {
               ) : null}
             </>
           ) : null}
-        </MapView>
+        </AppMapView>
 
         <View style={styles.mapOverlayTop}>
           {activeBooking ? (
@@ -1905,7 +1906,7 @@ function ProviderStationDashboard() {
           {provider.addressLine}, {provider.city}, {provider.state} · {provider.pincode}
         </Text>
         <View style={providerStyles.mapContainer}>
-          <MapView
+          <AppMapView
             style={providerStyles.map}
             initialRegion={{
               latitude: stationCoords.latitude,
@@ -1915,14 +1916,13 @@ function ProviderStationDashboard() {
             }}
             scrollEnabled={false}
             zoomEnabled={false}
-            liteMode={Platform.OS === 'android'}
           >
             <Marker coordinate={stationCoords} tracksViewChanges={false}>
               <View style={providerStyles.stationPin}>
                 <MaterialCommunityIcons name="ev-station" size={20} color="#FFFFFF" />
               </View>
             </Marker>
-          </MapView>
+          </AppMapView>
         </View>
       </View>
 
