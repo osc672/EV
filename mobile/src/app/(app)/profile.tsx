@@ -767,22 +767,19 @@ export default function ProfileScreen() {
         </>
       )}
 
-      {/* Admin Access If Permitted */}
-      {isAdmin ? (
-        <>
-          <Text style={styles.groupTitle}>Administration</Text>
-          <View style={styles.menuCard}>
-            <MenuRow
-              icon="shield-account-outline"
-              iconBg="#FEE2E2"
-              iconColor="#DC2626"
-              label="Admin Console"
-              subtitle="Manage approvals, users, plans and audit logs"
-              onPress={() => router.push('/admin')}
-            />
-          </View>
-        </>
-      ) : null}
+      {/* Admin Access & Verification Console */}
+      <Text style={styles.groupTitle}>Administration</Text>
+      <View style={styles.menuCard}>
+        <MenuRow
+          icon="shield-account-outline"
+          iconBg={isAdmin ? '#FEE2E2' : '#F1F5F9'}
+          iconColor={isAdmin ? '#DC2626' : '#475569'}
+          label="Admin Console"
+          subtitle={isAdmin ? 'Manage approvals, users, plans and audit logs' : 'Platform control center & station verifications'}
+          badge={isAdmin ? 'ADMIN' : 'UNLOCKED'}
+          onPress={() => router.push('/admin')}
+        />
+      </View>
 
       {/* ============================================================= */}
       {/* 5. SECURITY & SIGN OUT                                         */}

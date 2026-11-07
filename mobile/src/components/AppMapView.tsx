@@ -75,7 +75,7 @@ function deltaToZoom(latitudeDelta = 0.04): number {
   return 9;
 }
 
-const DARK_NAVIGATION_HTML = `<!DOCTYPE html>
+const NAVIGATION_MAP_HTML = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -86,30 +86,20 @@ const DARK_NAVIGATION_HTML = `<!DOCTYPE html>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body, #map {
       width: 100%; height: 100%;
-      background: #0E1626; overflow: hidden;
+      background: #F8FAFC; overflow: hidden;
     }
     .leaflet-control-attribution, .leaflet-control-zoom { display: none !important; }
 
-    /* Google Maps Dark Navigation Theme Filter on Tiles */
+    /* High-contrast, clean navigation map (Rapido & Ola style) - No invert filters */
     .leaflet-tile-pane {
-      background: #0E1626 !important;
-    }
-    .leaflet-tile {
-      filter: invert(100%) hue-rotate(190deg) brightness(88%) contrast(125%) saturate(80%);
-      -webkit-filter: invert(100%) hue-rotate(190deg) brightness(88%) contrast(125%) saturate(80%);
+      background: #F8FAFC !important;
     }
 
-    /* Markers and overlay vector lines must be 100% normal and un-inverted */
-    .leaflet-marker-pane, .leaflet-overlay-pane, .leaflet-popup-pane {
-      filter: none !important;
-      -webkit-filter: none !important;
-    }
-
-    /* User Live GPS Marker - White inner dot, electric blue halo, pulsing radar (Image 2 style) */
+    /* User Live GPS Marker - Crisp white center, electric blue halo, pulsing radar */
     .ev-user-marker {
       width: 22px; height: 22px; border-radius: 50%;
       background: #0284C7; border: 3px solid #FFFFFF;
-      box-shadow: 0 0 14px rgba(2,132,199,0.95);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3), 0 0 12px rgba(2,132,199,0.8);
       position: relative;
       display: flex; align-items: center; justify-content: center;
     }
@@ -122,7 +112,7 @@ const DARK_NAVIGATION_HTML = `<!DOCTYPE html>
       content: '';
       position: absolute; top: -8px; left: -8px; right: -8px; bottom: -8px;
       border-radius: 50%;
-      background: rgba(2,132,199,0.35);
+      background: rgba(2,132,199,0.25);
       animation: pulse 2s infinite ease-out;
     }
     @keyframes pulse {
@@ -130,7 +120,7 @@ const DARK_NAVIGATION_HTML = `<!DOCTYPE html>
       100% { transform: scale(2.4); opacity: 0; }
     }
 
-    /* Red Destination Teardrop Marker matching navigation (Image 2 style) */
+    /* Red Destination Teardrop Marker matching navigation */
     .ev-destination-pin {
       width: 28px; height: 38px; position: relative;
       cursor: pointer;
@@ -140,30 +130,30 @@ const DARK_NAVIGATION_HTML = `<!DOCTYPE html>
       background: #EF4444;
       transform: rotate(-45deg);
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
     }
     .pin-dot {
       width: 9px; height: 9px; border-radius: 50%;
       background: #FFFFFF;
     }
 
-    /* EV Charging Station Pin */
+    /* EV Charging Station Pin (Rapido / Ola high-contrast emerald pin) */
     .ev-station-pin {
       width: 36px; height: 36px; border-radius: 50%;
-      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      background: #059669;
       border: 3px solid #FFFFFF;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.6), 0 0 10px rgba(16,185,129,0.5);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35), 0 0 10px rgba(5,150,105,0.4);
       display: flex; align-items: center; justify-content: center;
       color: #FFFFFF; font-size: 17px; font-weight: 800;
       cursor: pointer;
       transition: transform 0.15s ease;
     }
     .ev-station-pin:active {
-      transform: scale(1.2);
+      transform: scale(1.18);
     }
     .ev-station-pin.busy {
-      background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-      box-shadow: 0 4px 14px rgba(0,0,0,0.6), 0 0 10px rgba(245,158,11,0.5);
+      background: #D97706;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35), 0 0 10px rgba(217,119,6,0.4);
     }
   </style>
 </head>
@@ -189,18 +179,20 @@ const DARK_NAVIGATION_HTML = `<!DOCTYPE html>
         doubleClickZoom: zoomEnabled,
       }).setView([lat, lng], zoom);
 
-      // Official OpenStreetMap tiles with custom subdomains
-      var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      // Clean, professional navigation street map (Esri World Street Map - free, high-contrast, zero watermark)
+      var streetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
-        subdomains: ['a', 'b', 'c'],
-        attribution: '&copy; OpenStreetMap contributors'
+        attribution: 'Esri'
       }).addTo(map);
 
-      // Fallback to Esri World Street Map if primary OSM tile fails
-      osmLayer.on('tileerror', function() {
+      // Fallback to OSM
+      streetLayer.on('tileerror', function() {
         if (!map._fallbackAdded) {
           map._fallbackAdded = true;
-          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            subdomains: ['a', 'b', 'c']
+          }).addTo(map);
         }
       });
 
@@ -314,25 +306,25 @@ const DARK_NAVIGATION_HTML = `<!DOCTYPE html>
         });
       }
 
-      // 2. Update Polylines: Glowing Electric Cyan Navigation Line (matching Google Maps in Image 2)
+      // 2. Update Polylines: Clean High-Contrast Navigation Polyline (Rapido / Ola style)
       polylinesLayer.clearLayers();
       if (polylines && polylines.length) {
         polylines.forEach(function(p) {
           if (!p.coordinates || p.coordinates.length < 2) return;
           var latLngs = p.coordinates.map(function(c) { return [c.latitude, c.longitude]; });
 
-          // Outer casing (dark blue shadow for neon contrast)
+          // Outer dark casing for sharp road contrast
           L.polyline(latLngs, {
-            color: '#004B80',
-            weight: 8.5,
+            color: '#1E3A8A',
+            weight: 8,
             lineCap: 'round',
             lineJoin: 'round',
-            opacity: 0.85
+            opacity: 0.95
           }).addTo(polylinesLayer);
 
-          // Inner glowing electric cyan line
+          // Inner vibrant electric blue navigation line
           L.polyline(latLngs, {
-            color: '#00E5FF',
+            color: '#0284C7',
             weight: 5,
             lineCap: 'round',
             lineJoin: 'round',
@@ -341,15 +333,15 @@ const DARK_NAVIGATION_HTML = `<!DOCTYPE html>
         });
       }
 
-      // 3. Update Circles (soft glowing cyan radar)
+      // 3. Update Circles (soft navigation radar)
       circlesLayer.clearLayers();
       if (circles && circles.length) {
         circles.forEach(function(c) {
           if (!c.center || !c.radius) return;
           var circle = L.circle([c.center.latitude, c.center.longitude], {
             radius: c.radius,
-            color: 'rgba(0, 229, 255, 0.45)',
-            fillColor: 'rgba(0, 229, 255, 0.08)',
+            color: 'rgba(2, 132, 199, 0.5)',
+            fillColor: 'rgba(2, 132, 199, 0.08)',
             fillOpacity: 0.2,
             weight: 1.5
           });
@@ -538,7 +530,7 @@ export const AppMapView = forwardRef<AppMapViewHandle, AppMapViewProps>((props, 
       <WebViewComponent
         ref={webViewRef}
         originWhitelist={['*']}
-        source={{ html: DARK_NAVIGATION_HTML }}
+        source={{ html: NAVIGATION_MAP_HTML }}
         injectedJavaScript={initScript}
         onMessage={handleMessage}
         style={styles.webView}
@@ -559,11 +551,11 @@ AppMapView.displayName = 'AppMapView';
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
-    backgroundColor: '#0E1626',
+    backgroundColor: '#F8FAFC',
   },
   webView: {
     flex: 1,
-    backgroundColor: '#0E1626',
+    backgroundColor: '#F8FAFC',
   },
 });
 

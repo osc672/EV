@@ -146,7 +146,7 @@ router.get(
           }
         : {}),
     };
-    const [total, rawUsers] = await prisma.$transaction([
+    const [total, rawUsers] = await Promise.all([
       prisma.user.count({ where }),
       prisma.user.findMany({
         where,
@@ -285,7 +285,7 @@ router.get(
           }
         : {}),
     };
-    const [total, rawProviders] = await prisma.$transaction([
+    const [total, rawProviders] = await Promise.all([
       prisma.providerProfile.count({ where }),
       prisma.providerProfile.findMany({
         where,
@@ -658,7 +658,7 @@ router.get(
   validate(pageSchema, 'query'),
   asyncHandler(async (req, res) => {
     const { page, pageSize } = req.query as never as { page: number; pageSize: number };
-    const [total, items] = await prisma.$transaction([
+    const [total, items] = await Promise.all([
       prisma.auditLog.count(),
       prisma.auditLog.findMany({
         include: { actor: { select: { fullName: true, phone: true, role: true } } },
@@ -697,7 +697,7 @@ router.get(
     const where = {
       ...(status && status !== 'ALL' ? { status } : {}),
     };
-    const [total, items] = await prisma.$transaction([
+    const [total, items] = await Promise.all([
       prisma.booking.count({ where }),
       prisma.booking.findMany({
         where,

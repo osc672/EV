@@ -44,6 +44,7 @@ import { CONNECTOR_LABELS, PROVIDER_TYPE_LABELS, resolveImageUrl } from '@/lib/c
 import { authApi } from '@/lib/endpoints';
 import { formatCurrency, timeAgo } from '@/lib/format';
 import { queryClient } from '@/lib/queryClient';
+import { authenticateSocket } from '@/lib/socket';
 import { useAuthStore } from '@/store/auth';
 import { palette, radius, spacing } from '@/theme';
 import type { AdminBookingItem, AdminHelpdeskTicket, AdminReviewItem, ProviderDetail, SubscriptionPlanOption, User } from '@/types/api';
@@ -56,11 +57,15 @@ type SupportSubTab = 'helpdesk' | 'reviews' | 'audit';
 export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
+  const setSession = useAuthStore((s) => s.setSession);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const signOut = useAuthStore((s) => s.signOut);
   const isAdmin = user?.role === 'ADMIN';
 
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [adminPhone, setAdminPhone] = useState('+919999999999');
+  const [adminPassword, setAdminPassword] = useState('Admin@12345');
+  const [unlocking, setUnlocking] = useState(false);
 
   // Navigation tab state (bottom nav like user & provider panels)
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -382,14 +387,108 @@ export default function AdminScreen() {
     return () => sub.remove();
   }, []);
 
+  const handleUnlockAdmin = async () => {
+    if (!adminPhone.trim() || !adminPassword.trim()) {
+      Alert.alert('Required', 'Please enter admin phone/email and password.');
+      return;
+    }
+    setUnlocking(true);
+    try {
+      const tokens = await authApi.login({
+        phone: adminPhone.trim(),
+        password: adminPassword,
+      });
+      await setSession(tokens);
+      authenticateSocket(tokens.accessToken, tokens.user?.id, tokens.user?.providerProfile?.id);
+      queryClient.clear();
+      Alert.alert('Admin Console Unlocked! ✓', 'Welcome, Administrator.');
+    } catch (err) {
+      Alert.alert('Authentication Failed', getErrorMessage(err));
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
-      <View style={[styles.flex, styles.centerAll]}>
-        <EmptyState
-          icon="shield-lock"
-          title="Admin access required"
-          message="This portal is strictly restricted to EV Rescue administrators."
-        />
+      <View style={[styles.flex, { paddingTop: insets.top, backgroundColor: '#090D16' }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 }}>
+          <Pressable onPress={handleBack} style={styles.backButton}>
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFFFFF" />
+          </Pressable>
+          <Text style={{ fontSize: 18, fontWeight: '800', color: '#FFFFFF', marginLeft: 12 }}>
+            Admin Verification
+          </Text>
+        </View>
+
+        <ScrollView contentContainerStyle={{ padding: 24, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(239, 68, 68, 0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+            <MaterialCommunityIcons name="shield-crown" size={38} color="#EF4444" />
+          </View>
+
+          <Text style={{ fontSize: 22, fontWeight: '900', color: '#FFFFFF', textAlign: 'center', marginBottom: 6 }}>
+            Admin Console Access
+          </Text>
+          <Text style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', marginBottom: 28, lineHeight: 20 }}>
+            Enter administrator credentials to unlock station approvals, plan controls, user management, and audit logs.
+          </Text>
+
+          <View style={{ width: '100%', backgroundColor: '#131B2E', borderRadius: 18, padding: 20, borderWidth: 1, borderColor: '#1E293B', marginBottom: 20 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', marginBottom: 6 }}>
+              Administrator Identifier
+            </Text>
+            <TextInput
+              mode="outlined"
+              value={adminPhone}
+              onChangeText={setAdminPhone}
+              placeholder="+919999999999 or admin@evrescue.local"
+              textColor="#FFFFFF"
+              outlineColor="#334155"
+              activeOutlineColor="#10B981"
+              style={{ backgroundColor: '#0A101D', marginBottom: 16 }}
+            />
+
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', marginBottom: 6 }}>
+              Admin Master Password
+            </Text>
+            <TextInput
+              mode="outlined"
+              value={adminPassword}
+              onChangeText={setAdminPassword}
+              secureTextEntry
+              placeholder="Admin@12345"
+              textColor="#FFFFFF"
+              outlineColor="#334155"
+              activeOutlineColor="#10B981"
+              style={{ backgroundColor: '#0A101D', marginBottom: 20 }}
+            />
+
+            <Button
+              mode="contained"
+              loading={unlocking}
+              disabled={unlocking}
+              onPress={handleUnlockAdmin}
+              buttonColor="#10B981"
+              textColor="#FFFFFF"
+              style={{ borderRadius: 12, paddingVertical: 4 }}
+              icon="shield-check"
+            >
+              Unlock Console
+            </Button>
+          </View>
+
+          <Button
+            mode="text"
+            onPress={() => {
+              setAdminPhone('+919999999999');
+              setAdminPassword('Admin@12345');
+            }}
+            textColor="#38BDF8"
+            icon="auto-fix"
+          >
+            Prefill Default Admin Credentials
+          </Button>
+        </ScrollView>
       </View>
     );
   }

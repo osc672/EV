@@ -2010,11 +2010,11 @@ const styles = StyleSheet.create({
     height: 320,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#0E1626',
+    backgroundColor: '#F8FAFC',
     marginTop: 6,
     position: 'relative',
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: '#E2E8F0',
   },
   userLocationMarker: {
     width: 24,
