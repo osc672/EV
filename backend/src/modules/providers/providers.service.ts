@@ -160,13 +160,19 @@ export async function updateProvider(userId: string, input: UpdateProviderInput)
 }
 
 export async function getProviderById(id: string, includeDocs = true) {
+  const cacheKey = `provider:${id}:${includeDocs ? 'docs' : 'nodocs'}`;
+  const cachedResult = appCache.get<any>(cacheKey);
+  if (cachedResult) return cachedResult;
+
   const provider = await prisma.providerProfile.findUnique({
     where: { id },
     include: includeDocs ? providerInclude : undefined,
   });
   if (!provider) throw new NotFoundError('Provider not found');
   const geo = await getGeoPoint(provider.id);
-  return { ...provider, location: geo };
+  const result = { ...provider, location: geo };
+  appCache.set(cacheKey, result, TTL.MEDIUM);
+  return result;
 }
 
 export async function listProviders(params: {
@@ -177,6 +183,10 @@ export async function listProviders(params: {
   page: number;
   pageSize: number;
 }) {
+  const cacheKey = `prov-list:${params.city ?? ''}:${params.providerType ?? ''}:${params.connector ?? ''}:${params.q ?? ''}:${params.page}:${params.pageSize}`;
+  const cachedResult = appCache.get<any>(cacheKey);
+  if (cachedResult) return cachedResult;
+
   const { city, providerType, connector, q, page, pageSize } = params;
   const where: Prisma.ProviderProfileWhereInput = {
     verificationStatus: 'APPROVED',
@@ -205,7 +215,9 @@ export async function listProviders(params: {
     }),
   ]);
 
-  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+  const result = { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+  appCache.set(cacheKey, result, TTL.SHORT);
+  return result;
 }
 
 export async function ensureProvidersApproved() {

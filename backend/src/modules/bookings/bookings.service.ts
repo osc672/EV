@@ -7,6 +7,7 @@ import { CreateBookingInput, UpdateBookingStatusInput } from './bookings.schema'
 import { PrismaClientKnownRequestError } from '../../generated/prisma/runtime/library';
 import { getGeoPoint } from '../providers/providers.service';
 import { emitToUser, emitToProvider, emitToBooking, broadcastStationStatus, latestDriverLocations } from '../../lib/socket';
+import { appCache } from '../../lib/cache';
 
 const bookingInclude = {
   provider: {
@@ -157,7 +158,9 @@ export async function createBooking(driverId: string, input: CreateBookingInput)
   }
 
   broadcastStationStatus(provider.id, false);
+  appCache.delByPrefix('bookings-list:');
 
+  appCache.delByPrefix('bookings-list:');
   return result;
 }
 
@@ -166,6 +169,10 @@ export async function listBookings(
   role: 'driver' | 'provider',
   params: { status?: BookingStatus; page: number; pageSize: number },
 ) {
+  const cacheKey = `bookings-list:${userId}:${role}:${params.status ?? ''}:${params.page}:${params.pageSize}`;
+  const cached = appCache.get<any>(cacheKey);
+  if (cached) return cached;
+
   let where: Prisma.BookingWhereInput;
   if (role === 'provider') {
     const provider = await prisma.providerProfile.findUnique({ where: { userId } });
@@ -207,13 +214,16 @@ export async function listBookings(
     }));
   }
 
-  return {
+  const result = {
     items: itemsWithGeo,
     total,
     page: params.page,
     pageSize: params.pageSize,
     totalPages: Math.ceil(total / params.pageSize),
   };
+  appCache.set(cacheKey, result, 6000); // 6 second cache
+  appCache.delByPrefix('bookings-list:');
+  return result;
 }
 
 export async function getBooking(userId: string, bookingId: string) {
@@ -413,6 +423,7 @@ export async function updateStatus(
     }
   }
 
+  appCache.delByPrefix('bookings-list:');
   return finalBooking;
 }
 
@@ -488,6 +499,7 @@ export async function settleOfflinePayment(
     paymentStatus: 'PAID',
   });
 
+  appCache.delByPrefix('bookings-list:');
   return result;
 }
 
