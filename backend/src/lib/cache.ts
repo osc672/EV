@@ -81,9 +81,9 @@ setInterval(() => {
 /** TTL constants (milliseconds) */
 export const TTL = {
   /** Hot public data — nearby providers, map pins */
-  SHORT: 15_000,       // 15 s
+  SHORT: 30_000,       // 30 s
   /** Semi-static data — provider details, plans */
-  MEDIUM: 60_000,      // 60 s
+  MEDIUM: 2 * 60_000,  // 2 min
   /** Rarely changes — admin stats overview */
   LONG: 5 * 60_000,    // 5 min
 } as const;

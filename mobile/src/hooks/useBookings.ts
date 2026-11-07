@@ -20,11 +20,12 @@ export function useBookings(params: { role?: 'driver' | 'provider'; status?: str
   });
 }
 
-export function useBooking(id: string | undefined) {
+export function useBooking(id: string | undefined, options?: { refetchInterval?: number | false }) {
   return useQuery({
     queryKey: queryKeys.bookings.detail(id ?? ''),
     queryFn: () => bookingsApi.detail(id!),
     enabled: Boolean(id),
+    refetchInterval: options?.refetchInterval,
   });
 }
 

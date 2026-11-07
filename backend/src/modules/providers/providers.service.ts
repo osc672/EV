@@ -248,9 +248,9 @@ export async function findNearby(params: {
   availableOnly?: boolean;
   limit: number;
 }) {
-  // Cache key: round coords to 3dp (~110m grid) so nearby users share results
-  const cacheKey = `nearby:${params.lat.toFixed(3)}:${params.lng.toFixed(3)}:${params.radiusKm}:${params.connector ?? ''}:${params.providerType ?? ''}:${params.availableOnly ? '1' : '0'}:${params.limit}`;
-  return cached(cacheKey, TTL.SHORT, () => _findNearbyDB(params));
+  // Cache key: round coords to 2dp (~1.1km grid) so nearby users share instant cached results
+  const cacheKey = `nearby:${params.lat.toFixed(2)}:${params.lng.toFixed(2)}:${params.radiusKm}:${params.connector ?? ''}:${params.providerType ?? ''}:${params.availableOnly ? '1' : '0'}:${params.limit}`;
+  return cached(cacheKey, TTL.LONG, () => _findNearbyDB(params));
 }
 
 async function _findNearbyDB(params: {

@@ -31,7 +31,7 @@ import { useRealtimeBooking } from '@/hooks/useRealtime';
 import { getErrorMessage } from '@/lib/api';
 import { CONNECTOR_LABELS, resolveImageUrl } from '@/lib/config';
 import { paymentsApi, providersApi, reviewsApi, searchApi, uploadsApi, usersApi } from '@/lib/endpoints';
-import { playNotificationChime, speakNotification, formatSlotSpeech } from '@/lib/soundNotification';
+import { playNotificationChime, speakNotification, formatSlotSpeech, playDriverSlotConfirmedAlert } from '@/lib/soundNotification';
 import {
   formatCurrency,
   formatDateTime,
@@ -64,7 +64,35 @@ export default function BookingDetailScreen() {
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
 
-  const { data: booking, isLoading, isError, refetch, isRefetching } = useBooking(bookingId);
+  const [activePoll, setActivePoll] = useState(true);
+  const { data: booking, isLoading, isError, refetch, isRefetching } = useBooking(bookingId, {
+    refetchInterval: activePoll ? 3000 : false,
+  });
+
+  // Connect to realtime room for live status changes
+  useRealtimeBooking(bookingId);
+
+  // Watch for confirmation transition to trigger slot confirmed alert
+  const prevStatusRef = useRef<string | undefined>(undefined);
+  const confirmedAlertAnnouncedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!booking) return;
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = booking.status;
+
+    if (booking.status !== 'PENDING') {
+      setActivePoll(false);
+    }
+
+    if (booking.status === 'CONFIRMED' && !confirmedAlertAnnouncedRef.current) {
+      if (prev === 'PENDING' || justBooked) {
+        confirmedAlertAnnouncedRef.current = true;
+        void playDriverSlotConfirmedAlert(booking.provider?.businessName, booking.scheduledAt);
+      }
+    }
+  }, [booking, justBooked]);
+
   const { data: providerDetail } = useProvider(booking?.providerId);
   const { data: myProvider } = useMyProvider();
   const { coords: userCoords } = useCurrentLocation();

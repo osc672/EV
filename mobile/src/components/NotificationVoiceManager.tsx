@@ -151,11 +151,6 @@ export function NotificationVoiceManager() {
       detailHighlight?: string,
       meta?: string,
     ) => {
-      // Slot confirmed alert strictly plays on driver side only
-      if (type === 'DRIVER_CONFIRMED' && isProvider) {
-        return;
-      }
-
       const now = Date.now();
       // De-duplicate burst triggers of the SAME type within 1.5 seconds
       // (don't block different-type events, e.g. booking:incoming + notification:received arriving together)
@@ -191,7 +186,7 @@ export function NotificationVoiceManager() {
         });
       }
     },
-    [isProvider],
+    [],
   );
 
   const handleIncomingBooking = useCallback(
@@ -221,8 +216,6 @@ export function NotificationVoiceManager() {
 
   const handleBookingConfirmed = useCallback(
     (booking: Booking, customTitle?: string, customBody?: string) => {
-      if (isProvider) return; // Only driver hears confirmation
-
       const key = `confirmed_${booking.id}`;
       if (globalAnnouncedKeys.has(key)) return;
       globalAnnouncedKeys.add(key);
@@ -244,7 +237,7 @@ export function NotificationVoiceManager() {
         `Charger is reserved and ready for you · Tap to open directions`,
       );
     },
-    [isProvider, triggerNotificationAlert],
+    [triggerNotificationAlert],
   );
 
   const handleBookingCancelled = useCallback(
@@ -268,7 +261,6 @@ export function NotificationVoiceManager() {
       const notifType = notifData.type || (payload.booking ? 'BOOKING_CREATED' : undefined);
 
       if (notifType === 'BOOKING_CONFIRMED') {
-        if (isProvider) return; // Driver only
         if (bookingId && globalAnnouncedKeys.has(`confirmed_${bookingId}`)) return;
         if (payload.id) globalAnnouncedKeys.add(payload.id);
         if (bookingId) globalAnnouncedKeys.add(`confirmed_${bookingId}`);
@@ -292,7 +284,7 @@ export function NotificationVoiceManager() {
         return;
       }
     },
-    [isProvider, handleBookingConfirmed, handleIncomingBooking, triggerNotificationAlert],
+    [handleBookingConfirmed, handleIncomingBooking, triggerNotificationAlert],
   );
 
   useGlobalRealtimeEvents({

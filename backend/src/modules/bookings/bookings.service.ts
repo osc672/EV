@@ -370,7 +370,12 @@ export async function updateStatus(
     emitToUser(recipientId, 'notification:received', {
       title: notifTitle,
       body: notifBody,
-      data: { bookingId, type: `BOOKING_${next}` },
+      data: {
+        bookingId,
+        type: `BOOKING_${next}`,
+        driverId: booking.driverId,
+        providerUserId: booking.provider.userId,
+      },
       booking: updated,
       createdAt: new Date().toISOString(),
     });
@@ -399,12 +404,15 @@ export async function updateStatus(
       emitToBooking(bookingId, 'booking:confirmed', {
         bookingId,
         booking: finalBooking,
+        driverId: booking.driverId,
+        providerUserId: booking.provider.userId,
         title: notifTitle,
         body: notifBody,
       });
       emitToUser(booking.driverId, 'booking:confirmed', {
         bookingId,
         booking: finalBooking,
+        driverId: booking.driverId,
         title: notifTitle,
         body: notifBody,
       });

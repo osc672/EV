@@ -15,6 +15,7 @@ export function useNearbyProviders(params: NearbyParams, enabled = true) {
   return useQuery({
     queryKey: queryKeys.providers.nearby(params),
     queryFn: () => providersApi.nearby(params),
+    staleTime: 60_000,
     enabled: enabled && Number.isFinite(params.lat) && Number.isFinite(params.lng),
   });
 }
@@ -31,6 +32,7 @@ export function useProviderList(params: ProviderListParams, enabled = true) {
         totalPages: Number(meta.totalPages ?? 1),
       };
     },
+    staleTime: 60_000,
     enabled,
   });
 }
@@ -39,6 +41,7 @@ export function useProvider(id: string | undefined) {
   return useQuery({
     queryKey: queryKeys.providers.detail(id ?? ''),
     queryFn: () => providersApi.detail(id!),
+    staleTime: 60_000,
     enabled: Boolean(id),
   });
 }

@@ -2,7 +2,7 @@ import { Platform, Vibration } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Speech from 'expo-speech';
 
-export const ALERT_CHANNEL_ID = 'rapido_alerts_v2';
+export const ALERT_CHANNEL_ID = 'ev_dispatch_alerts_v4';
 
 let channelInitialized = false;
 
@@ -34,13 +34,17 @@ export async function initNotificationChannel(): Promise<void> {
         await Notifications.setNotificationChannelAsync(ALERT_CHANNEL_ID, {
           name: 'EV Rescue Dispatch Alerts',
           importance: ((Notifications as any).AndroidImportance?.MAX ?? 5) as Notifications.AndroidImportance,
+          sound: 'default',
           vibrationPattern: [0, 250, 150, 250],
           enableVibrate: true,
           showBadge: true,
+          enableLights: true,
+          lightColor: '#10B981',
+          lockscreenVisibility: ((Notifications as any).AndroidNotificationVisibility?.PUBLIC ?? 1) as Notifications.AndroidNotificationVisibility,
+          bypassDnd: true,
         });
       } catch (channelErr) {
-        // In Expo Go on Android SDK 53, notification channels may throw NullPointerException
-        console.log('[NotificationChannel] Safe fallback for Expo Go channel:', channelErr);
+        console.log('[NotificationChannel] Safe fallback for channel creation:', channelErr);
       }
     }
 
@@ -90,7 +94,9 @@ export async function playNotificationChime(
           content: {
             title,
             body,
+            sound: 'default',
             priority: Notifications.AndroidNotificationPriority.MAX,
+            ...(Platform.OS === 'android' ? { channelId: ALERT_CHANNEL_ID } : {}),
           },
           trigger: null,
         });
