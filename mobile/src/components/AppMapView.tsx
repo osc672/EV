@@ -148,17 +148,17 @@ const LEAFLET_HTML = `<!DOCTYPE html>
         doubleClickZoom: zoomEnabled,
       }).setView([lat, lng], zoom);
 
-      // CartoDB Voyager tiles - high-contrast, clean EV styling
-      var voyager = L.tileLayer('https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png', {
+      // 100% Free Open Street Map tiles via Esri Global CDN - No API key required, crisp streets, no watermarks
+      var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
-        subdomains: 'abcd'
+        attribution: 'Esri'
       }).addTo(map);
 
-      // Fallback to OSM standard tiles if Voyager fails
-      voyager.on('tileerror', function() {
-        if (!map._osmFallbackAdded) {
-          map._osmFallbackAdded = true;
-          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      // Fallback to Esri World Topo Map if primary tile fails
+      streetMap.on('tileerror', function() {
+        if (!map._fallbackAdded) {
+          map._fallbackAdded = true;
+          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
         }
       });
 
