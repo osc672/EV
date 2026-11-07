@@ -9,12 +9,6 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#021B14",
     "primaryColor": "#10B981",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#021B14"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.evrescue.app",
@@ -27,10 +21,10 @@
     },
     "android": {
       "package": "com.evrescue.app",
-      "splash": {
-        "backgroundColor": "#021B14",
-        "resizeMode": "contain",
-        "image": "./assets/splash-icon.png"
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDummyKeyForGoogleMapsInitializationEV"
+        }
       },
       "adaptiveIcon": {
         "backgroundColor": "#021B14",
@@ -74,6 +68,16 @@
         "expo-notifications",
         {
           "color": "#0B3D2E"
+        }
+      ],
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#021B14"
         }
       ]
     ],
