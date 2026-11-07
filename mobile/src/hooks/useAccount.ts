@@ -116,9 +116,8 @@ export function useNotifications() {
     queryKey: queryKeys.notifications.list(),
     queryFn: () => notificationsApi.list(),
     enabled: Boolean(user),
-    // Poll every 15 s as a fallback when the socket is blocked or slow
-    refetchInterval: 15_000,
-    staleTime: 10_000,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 }
 
@@ -128,9 +127,8 @@ export function useUnreadNotifications() {
     queryKey: queryKeys.notifications.unread(),
     queryFn: () => notificationsApi.unreadCount(),
     enabled: Boolean(user),
-    // Poll every 10 s so the badge stays accurate even without a socket
-    refetchInterval: 10_000,
-    staleTime: 5_000,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 }
 

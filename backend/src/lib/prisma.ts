@@ -4,14 +4,22 @@ import { env } from '../config/env';
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
+function getPoolUrl(): string {
+  let url = env.DATABASE_URL;
+  if (!url) return url;
+  if (!url.includes('connection_limit=')) {
+    url += (url.includes('?') ? '&' : '?') + 'connection_limit=20&pool_timeout=15';
+  }
+  return url;
+}
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     log: ['warn', 'error'],
-    // Increase connection pool for concurrent users
     datasources: {
       db: {
-        url: env.DATABASE_URL,
+        url: getPoolUrl(),
       },
     },
   });

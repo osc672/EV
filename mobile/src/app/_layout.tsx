@@ -96,7 +96,7 @@ function RootNavigator() {
         <Stack.Screen name="notifications" options={{ headerShown: true, title: 'Notifications', animation: 'slide_from_right' }} />
         <Stack.Screen name="provider-setup" options={{ headerShown: true, title: 'Become a provider', animation: 'slide_from_right' }} />
         <Stack.Screen name="provider-dashboard" options={{ headerShown: true, title: 'Provider dashboard', animation: 'slide_from_right' }} />
-        <Stack.Screen name="admin/index" options={{ headerShown: false, animation: 'none' }} />
+        <Stack.Screen name="admin" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="+not-found" options={{ headerShown: true, title: 'Not found' }} />
       </Stack>
     </View>

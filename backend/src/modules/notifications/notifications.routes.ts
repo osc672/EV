@@ -9,6 +9,7 @@ import { ok } from '../../lib/response';
 import { prisma } from '../../lib/prisma';
 import { notify, notifyMany } from '../../lib/notifications';
 import { env } from '../../config/env';
+import { appCache } from '../../lib/cache';
 
 const router = Router();
 
@@ -21,11 +22,17 @@ router.get(
   '/',
   authenticate,
   asyncHandler(async (req, res) => {
+    const userId = req.user!.id;
+    const cacheKey = `notif:list:${userId}`;
+    const cached = appCache.get<any>(cacheKey);
+    if (cached) return ok(res, cached);
+
     const notifications = await prisma.notification.findMany({
-      where: { userId: req.user!.id },
+      where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      take: 50,
     });
+    appCache.set(cacheKey, notifications, 15_000);
     return ok(res, notifications);
   }),
 );
@@ -34,10 +41,17 @@ router.get(
   '/unread-count',
   authenticate,
   asyncHandler(async (req, res) => {
+    const userId = req.user!.id;
+    const cacheKey = `notif:unread:${userId}`;
+    const cached = appCache.get<{ count: number }>(cacheKey);
+    if (cached) return ok(res, cached);
+
     const count = await prisma.notification.count({
-      where: { userId: req.user!.id, readAt: null },
+      where: { userId, readAt: null },
     });
-    return ok(res, { count });
+    const result = { count };
+    appCache.set(cacheKey, result, 15_000);
+    return ok(res, result);
   }),
 );
 
@@ -45,8 +59,11 @@ router.patch(
   '/:id/read',
   authenticate,
   asyncHandler(async (req, res) => {
+    const userId = req.user!.id;
+    appCache.del(`notif:unread:${userId}`);
+    appCache.del(`notif:list:${userId}`);
     await prisma.notification.updateMany({
-      where: { id: param(req, 'id'), userId: req.user!.id },
+      where: { id: param(req, 'id'), userId },
       data: { readAt: new Date() },
     });
     return ok(res, { message: 'Marked read' });
@@ -57,6 +74,9 @@ router.patch(
   '/read-all',
   authenticate,
   asyncHandler(async (req, res) => {
+    const userId = req.user!.id;
+    appCache.del(`notif:unread:${userId}`);
+    appCache.del(`notif:list:${userId}`);
     await prisma.notification.updateMany({
       where: { userId: req.user!.id, readAt: null },
       data: { readAt: new Date() },

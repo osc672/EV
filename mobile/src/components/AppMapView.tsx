@@ -179,22 +179,54 @@ const NAVIGATION_MAP_HTML = `<!DOCTYPE html>
         doubleClickZoom: zoomEnabled,
       }).setView([lat, lng], zoom);
 
-      // Clean, professional navigation street map (Esri World Street Map - free, high-contrast, zero watermark)
-      var streetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19,
-        attribution: 'Esri'
-      }).addTo(map);
-
-      // Fallback to OSM
-      streetLayer.on('tileerror', function() {
-        if (!map._fallbackAdded) {
-          map._fallbackAdded = true;
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            subdomains: ['a', 'b', 'c']
-          }).addTo(map);
+      var tileProviders = [
+        {
+          name: 'google',
+          url: 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+          subdomains: ['0', '1', '2', '3'],
+          maxZoom: 20
+        },
+        {
+          name: 'esri',
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+          subdomains: ['server'],
+          maxZoom: 19
+        },
+        {
+          name: 'osm',
+          url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          subdomains: ['a', 'b', 'c'],
+          maxZoom: 19
         }
-      });
+      ];
+
+      var currentProviderIdx = 0;
+      var activeTileLayer = null;
+      var tileErrorCount = 0;
+
+      function loadLayer(idx) {
+        if (activeTileLayer && map) {
+          map.removeLayer(activeTileLayer);
+        }
+        var prov = tileProviders[idx];
+        activeTileLayer = L.tileLayer(prov.url, {
+          maxZoom: prov.maxZoom,
+          subdomains: prov.subdomains,
+          crossOrigin: true
+        }).addTo(map);
+
+        activeTileLayer.on('tileerror', function() {
+          tileErrorCount++;
+          // Fail-safe auto-bypass: If 3 tiles fail on this provider, seamlessly switch to next provider
+          if (tileErrorCount >= 3 && currentProviderIdx < tileProviders.length - 1) {
+            tileErrorCount = 0;
+            currentProviderIdx++;
+            loadLayer(currentProviderIdx);
+          }
+        });
+      }
+
+      loadLayer(0);
 
       markersLayer = L.layerGroup().addTo(map);
       polylinesLayer = L.layerGroup().addTo(map);
@@ -313,9 +345,9 @@ const NAVIGATION_MAP_HTML = `<!DOCTYPE html>
           if (!p.coordinates || p.coordinates.length < 2) return;
           var latLngs = p.coordinates.map(function(c) { return [c.latitude, c.longitude]; });
 
-          // Outer dark casing for sharp road contrast
+          // Outer dark casing for sharp road contrast (Rapido / Ola / Google Maps style)
           L.polyline(latLngs, {
-            color: '#1E3A8A',
+            color: '#0A2540',
             weight: 8,
             lineCap: 'round',
             lineJoin: 'round',
@@ -324,7 +356,7 @@ const NAVIGATION_MAP_HTML = `<!DOCTYPE html>
 
           // Inner vibrant electric blue navigation line
           L.polyline(latLngs, {
-            color: '#0284C7',
+            color: '#00B4D8',
             weight: 5,
             lineCap: 'round',
             lineJoin: 'round',

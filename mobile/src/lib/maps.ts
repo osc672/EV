@@ -11,26 +11,49 @@ export function openGoogleMapsRoute(
   userLat?: number,
   userLng?: number,
 ) {
+  const label = encodeURIComponent(destLabel ?? 'EV Charging Point');
   const hasUser = Number.isFinite(userLat) && Number.isFinite(userLng);
   const originParam = hasUser ? `&origin=${userLat},${userLng}` : '';
-  const label = encodeURIComponent(destLabel ?? 'EV Charging Point');
 
-  // Google Maps Universal Directions URL (Opens native Google Maps App on Android/iOS)
-  const universalUrl = `https://www.google.com/maps/dir/?api=1${originParam}&destination=${destLat},${destLng}&destination_place_id=${label}&travelmode=driving`;
+  // 1. Android Native Turn-by-Turn Navigation Intent (Rapido / Ola / Google Maps direct turn-by-turn driving)
+  const androidNavIntent = `google.navigation:q=${destLat},${destLng}&mode=d`;
 
-  // Fallback intent for Android if universal link fails
+  // 2. Google Maps Universal Navigation URL (with dir_action=navigate)
+  const universalUrl = `https://www.google.com/maps/dir/?api=1${originParam}&destination=${destLat},${destLng}&destination_place_id=${label}&travelmode=driving&dir_action=navigate`;
+
+  // 3. Fallback geo URI
   const geoUrl = `geo:${destLat},${destLng}?q=${destLat},${destLng}(${label})`;
 
-  Linking.canOpenURL(universalUrl)
-    .then((supported) => {
-      if (supported) {
+  if (Platform.OS === 'android') {
+    Linking.canOpenURL(androidNavIntent)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(androidNavIntent);
+        }
+        return Linking.canOpenURL(universalUrl).then((uniSupported) => {
+          if (uniSupported) return Linking.openURL(universalUrl);
+          return Linking.openURL(geoUrl);
+        });
+      })
+      .catch(() => {
+        void Linking.openURL(universalUrl).catch(() => {
+          void Linking.openURL(geoUrl);
+        });
+      });
+  } else {
+    // iOS Apple Maps / Google Maps
+    const appleMapsUrl = `maps://?daddr=${destLat},${destLng}&dirflg=d`;
+    Linking.canOpenURL(appleMapsUrl)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(appleMapsUrl);
+        }
         return Linking.openURL(universalUrl);
-      }
-      return Platform.OS === 'android' ? Linking.openURL(geoUrl) : Linking.openURL(universalUrl);
-    })
-    .catch(() => {
-      void Linking.openURL(universalUrl);
-    });
+      })
+      .catch(() => {
+        void Linking.openURL(universalUrl);
+      });
+  }
 }
 
 /**

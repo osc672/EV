@@ -81,7 +81,7 @@ const helpdeskStatusSchema = z.object({
 router.get(
   '/stats',
   asyncHandler(async (_req, res) => {
-    const stats = await cached('admin:stats', TTL.SHORT, async () => {
+    const stats = await cached('admin:stats', TTL.MEDIUM, async () => {
       const [users, drivers, providers, pendingProviders, bookings, completed, revenue, reviews, tickets] =
         await Promise.all([
           prisma.user.count(),

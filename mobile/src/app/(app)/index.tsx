@@ -731,12 +731,27 @@ function DriverHomeScreen() {
 
         <View style={styles.mapOverlayTop}>
           {activeBooking ? (
-            <View style={[styles.countPill, styles.activeRoutePill]}>
-              <MaterialCommunityIcons name="navigation-variant" size={14} color="#FFFFFF" />
+            <Pressable
+              style={[styles.countPill, styles.activeRoutePill]}
+              onPress={() => {
+                if (activeStationLat && activeStationLng) {
+                  openGoogleMapsRoute(
+                    activeStationLat,
+                    activeStationLng,
+                    activeBooking.provider?.businessName ?? 'Booked Station',
+                    coords?.latitude,
+                    coords?.longitude,
+                  );
+                }
+              }}
+              hitSlop={6}
+            >
+              <MaterialCommunityIcons name="google-maps" size={16} color="#FFFFFF" />
               <Text style={styles.activeRoutePillText}>
                 Route to {activeBooking.provider?.businessName ?? 'Booked Station'}
               </Text>
-            </View>
+              <MaterialCommunityIcons name="arrow-right-circle" size={14} color="#86EFAC" style={{ marginLeft: 4 }} />
+            </Pressable>
           ) : (
             <View style={styles.countPill}>
               <MaterialCommunityIcons name="ev-station" size={14} color={palette.primary} />
