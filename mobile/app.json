@@ -36,7 +36,8 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -78,6 +79,16 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#021B14"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": false,
+            "newArchEnabled": false,
+            "extraProguardRules": "-keep class com.google.android.gms.maps.** { *; }\n-keep interface com.google.android.gms.maps.** { *; }\n-keep class com.rnmaps.maps.** { *; }\n-keep class com.airbnb.android.react.maps.** { *; }"
+          }
         }
       ]
     ],
