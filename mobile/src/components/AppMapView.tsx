@@ -148,17 +148,18 @@ const LEAFLET_HTML = `<!DOCTYPE html>
         doubleClickZoom: zoomEnabled,
       }).setView([lat, lng], zoom);
 
-      // 100% Free Open Street Map tiles via Esri Global CDN - No API key required, crisp streets, no watermarks
-      var streetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      // Standard OpenStreetMap tiles (matching https://www.openstreetmap.org)
+      var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        attribution: 'Esri'
+        subdomains: ['a', 'b', 'c'],
+        attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
 
-      // Fallback to Esri World Topo Map if primary tile fails
-      streetMap.on('tileerror', function() {
+      // Fallback to Esri World Street Map if primary OSM tile fails
+      osmLayer.on('tileerror', function() {
         if (!map._fallbackAdded) {
           map._fallbackAdded = true;
-          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
+          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
         }
       });
 
@@ -474,6 +475,7 @@ export const AppMapView = forwardRef<AppMapViewHandle, AppMapViewProps>((props, 
         injectedJavaScript={initScript}
         onMessage={handleMessage}
         style={styles.webView}
+        userAgent="EVRescueApp/1.0 (contact: admin@evrescue.com)"
         scrollEnabled={false}
         overScrollMode="never"
         bounces={false}
