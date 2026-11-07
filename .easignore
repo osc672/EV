@@ -1,0 +1,8 @@
+backend/
+admin/
+node_modules/
+.git/
+.expo/
+*.log
+scratch/
+
